@@ -149,6 +149,11 @@
       "de": "./languages/de.json",
       "fr": "./languages/fr.json",
       "ja": "./languages/ja.json"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "93da7d49-0a7b-4de7-9a4a-09a838da2a2c"
+      }
     }
   }
 }
