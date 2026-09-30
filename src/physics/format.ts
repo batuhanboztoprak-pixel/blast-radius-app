@@ -142,6 +142,25 @@ export function formatYears(y: number): string {
   return t('years.every', { n: formatLarge(y) });
 }
 
+/** 44 s · 4 min · 6 h */
+export function formatDuration(seconds: number): string {
+  if (seconds < 90) return t('time.s', { n: int(Math.max(1, seconds)) });
+  if (seconds < 90 * 60) return t('time.min', { n: int(seconds / 60) });
+  return t('time.h', { n: sig3(seconds / 3600) });
+}
+
+/** 22,800 km² · 8,800 mi² */
+export function formatArea(m2: number, units: Units = 'metric'): string {
+  if (units === 'imperial') return `${sig3(m2 / (M_PER_MI * M_PER_MI))} mi²`;
+  if (m2 < 1e6) return `${sig3(m2)} m²`;
+  return `${sig3(m2 / 1e6)} km²`;
+}
+
+/** A temperature *difference*: 26 °C · 47 °F */
+export function formatTempDrop(celsius: number, units: Units = 'metric'): string {
+  return units === 'imperial' ? `${int(celsius * 1.8)} °F` : `${int(celsius)} °C`;
+}
+
 export function compositionLabel(c: Composition): string {
   return t(`composition.${c}`);
 }

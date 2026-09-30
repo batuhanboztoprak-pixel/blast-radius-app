@@ -12,6 +12,7 @@ import { PRESETS } from '../physics/presets';
 import { usePremium } from '../state/premium';
 import { useSimulation } from '../state/simulation';
 import {
+  REWARDED_PER_DAY,
   isFeature,
   isLockedItem,
   isPresetId,
@@ -25,9 +26,11 @@ const PERKS: Record<Feature, { title: MessageKey; body: MessageKey }> = {
   burns: { title: 'paywall.thermal', body: 'paywall.thermalBody' },
   compositions: { title: 'paywall.compositions', body: 'paywall.compositionsBody' },
   presets: { title: 'paywall.presets', body: 'paywall.presetsBody' },
+  cinematic: { title: 'paywall.cinematic', body: 'paywall.cinematicBody' },
+  aftermath: { title: 'paywall.aftermath', body: 'paywall.aftermathBody' },
   ads: { title: 'paywall.noAds', body: 'paywall.noAdsBody' },
 };
-const PERK_ORDER: Feature[] = ['ads', 'compositions', 'burns', 'presets'];
+const PERK_ORDER: Feature[] = ['cinematic', 'aftermath', 'ads', 'compositions', 'burns', 'presets'];
 
 /** Free vs Pro rows. `true` = included, `false` = not, a key = short text. */
 const COMPARE: { row: MessageKey; free: boolean | MessageKey; pro: boolean | MessageKey }[] = [
@@ -35,6 +38,8 @@ const COMPARE: { row: MessageKey; free: boolean | MessageKey; pro: boolean | Mes
   { row: 'compare.rock', free: true, pro: true },
   { row: 'compare.rings', free: true, pro: true },
   { row: 'compare.population', free: true, pro: true },
+  { row: 'compare.cinematic', free: 'compare.cinematicFree', pro: true },
+  { row: 'compare.aftermath', free: 'compare.aftermathFree', pro: true },
   { row: 'compare.ironComet', free: false, pro: true },
   { row: 'compare.burns', free: false, pro: true },
   { row: 'compare.presets', free: 'compare.presetsFree', pro: true },
@@ -48,7 +53,7 @@ export default function Paywall() {
 
   const { isPro, price, busy, error, purchase, restore } = usePremium();
   const { showPrivacyOptions, rewardedReady, showRewarded } = useAds();
-  const { grant } = useUpsell();
+  const { grant, rewardsLeftToday } = useUpsell();
   const { updateParams, applyPreset } = useSimulation();
   const { width } = useWindowDimensions();
   const [watching, setWatching] = useState(false);
@@ -59,7 +64,8 @@ export default function Paywall() {
   }, [isPro]);
 
   // Only offer a rewarded try for a specific item, and only when an ad is loaded.
-  const canWatch = !!item && !isPro && rewardedReady;
+  const canWatch = !!item && !isPro && rewardedReady && rewardsLeftToday > 0;
+  const limitReached = !!item && !isPro && rewardsLeftToday === 0;
 
   async function watchToTry() {
     if (!item) return;
@@ -145,8 +151,12 @@ export default function Paywall() {
           disabled={watching}
         />
         {canWatch && (
-          <SecondaryButton label={t('reward.watch')} onPress={watchToTry} disabled={watching || busy} />
+          <>
+            <SecondaryButton label={t('reward.watch')} onPress={watchToTry} disabled={watching || busy} />
+            <Text style={styles.triesLeft}>{t('reward.left', { n: rewardsLeftToday })}</Text>
+          </>
         )}
+        {limitReached && <Text style={styles.triesLeft}>{t('reward.limit', { n: REWARDED_PER_DAY })}</Text>}
         <View style={styles.links}>
           <Pressable onPress={restore} disabled={busy} accessibilityRole="button" hitSlop={8}>
             <Text style={styles.link}>{t('paywall.restore')}</Text>
@@ -218,5 +228,6 @@ const styles = StyleSheet.create({
   error: { marginTop: 12, color: colors.accent, fontFamily: fonts.body, fontSize: 13 },
   footer: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 12, gap: 10 },
   links: { flexDirection: 'row', justifyContent: 'center', gap: 24, marginTop: 4 },
+  triesLeft: { fontSize: 12, color: colors.muted, fontFamily: fonts.body, textAlign: 'center' },
   link: { color: colors.muted, fontSize: 13, fontFamily: fonts.bodyMedium, textDecorationLine: 'underline' },
 });

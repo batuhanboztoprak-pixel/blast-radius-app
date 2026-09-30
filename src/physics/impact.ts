@@ -55,6 +55,8 @@ export interface ImpactResult {
   breakupAltitudeM: number | null;
   /** Speed at the ground, or at burst altitude for an airburst. */
   finalVelocityMs: number;
+  /** Transient crater diameter (before collapse), null for airbursts. Used for ejecta. */
+  transientCraterDiameterM: number | null;
   /** Final (rim-to-rim) crater diameter, null for airbursts. */
   craterDiameterM: number | null;
   craterDepthM: number | null;
@@ -125,6 +127,7 @@ export function simulateImpact(params: ImpactorParams): ImpactResult {
   let craterDiameter: number | null = null;
   let craterDepth: number | null = null;
   let craterType: ImpactResult['craterType'] = null;
+  let transientCrater: number | null = null;
   if (entry.airburstAltitude === null) {
     const vi = entry.finalVelocity;
     const transient =
@@ -134,6 +137,7 @@ export function simulateImpact(params: ImpactorParams): ImpactResult {
       vi ** 0.44 *
       G ** -0.22 *
       Math.cbrt(sinT);
+    transientCrater = transient;
     if (transient * 1.25 < SIMPLE_COMPLEX_TRANSITION_M) {
       craterType = 'simple';
       craterDiameter = 1.25 * transient;
@@ -188,6 +192,7 @@ export function simulateImpact(params: ImpactorParams): ImpactResult {
     airburstAltitudeM: entry.airburstAltitude,
     breakupAltitudeM: entry.breakupAltitude,
     finalVelocityMs: entry.finalVelocity,
+    transientCraterDiameterM: transientCrater,
     craterDiameterM: craterDiameter,
     craterDepthM: craterDepth,
     craterType,

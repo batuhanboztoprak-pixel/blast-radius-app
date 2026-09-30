@@ -36,16 +36,48 @@ interface Props {
    */
   lockedRing?: Ring | null;
   onLockedPress?: () => void;
+  /**
+   * Play the cinematic version: the camera dives in tilted with the meteor, the
+   * real map rings grow from the impact while it pulls back and circles, then
+   * it settles top-down. Pro, a first-strike taste, or a rewarded unlock.
+   */
+  cinematic?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
 const EARTH_RADIUS_M = 6.371e6;
 
-type Strike = { center: { x: number; y: number }; rings: StrikeRing[]; token: number };
+/** Cinematic timeline, ms. */
+const CINE_FALL = 1500;
+const CINE_GROW = 2000;
+const CINE_ORBIT = 1600;
+const CINE_SETTLE = 900;
+/** Beyond this the camera can't frame the rings on a tilted flat map anyway. */
+const CINE_MAX_FRAME_M = 3_000_000;
+
+const easeOut = (x: number) => 1 - (1 - Math.min(Math.max(x, 0), 1)) ** 3;
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+type Strike = {
+  center: { x: number; y: number };
+  rings: StrikeRing[];
+  token: number;
+  cinematic: boolean;
+};
 
 /** Apple Maps (MapKit) on iOS with the damage rings drawn as geodesic circles. */
 export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
-  { location, rings, focusRadiusM = null, strikeToken = 0, onStrikeEnd, lockedRing, onLockedPress, style },
+  {
+    location,
+    rings,
+    focusRadiusM = null,
+    strikeToken = 0,
+    onStrikeEnd,
+    lockedRing,
+    onLockedPress,
+    cinematic = false,
+    style,
+  },
   ref,
 ) {
   const map = useRef<MapView>(null);
@@ -57,6 +89,12 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
   /** Hide the real rings while the animation is drawing them. */
   const [ringsHidden, setRingsHidden] = useState(strikeToken > 0);
   const shake = useState(() => new Animated.Value(0))[0];
+  /** Cinematic: ms since impact while the map rings grow (null = not growing). */
+  const [growth, setGrowth] = useState<number | null>(null);
+  /** Cinematic: camera tilt and rotation are allowed while it plays. */
+  const [cameraFree, setCameraFree] = useState(false);
+  /** Cinematic: set when the meteor lands; starts the ring growth and camera pull-back. */
+  const [impactAt, setImpactAt] = useState(0);
   const endRef = useRef(onStrikeEnd);
   useEffect(() => {
     endRef.current = onStrikeEnd;
@@ -96,6 +134,26 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
         // A replay may have just re-framed the map; let that animation settle first.
         if (strikeToken > 1) await new Promise((r) => setTimeout(r, 500));
         if (cancelled) return;
+        if (cinematic) {
+          const R = Math.min(rings[0]?.radiusM ?? FALLBACK_FRAME_RADIUS_M, CINE_MAX_FRAME_M);
+          const close = Math.max((rings.find((x) => x.kind === 'severe')?.radiusM ?? R / 3) * 2.4, 2500);
+          setCameraFree(true);
+          setImpactAt(0);
+          setGrowth(0);
+          setRingsHidden(false);
+          // Start high above, then dive in tilted while the meteor falls.
+          m.setCamera({ center: location, pitch: 0, heading: 0, altitude: R * 7 });
+          await wait(60);
+          if (cancelled) return;
+          m.animateCamera({ center: location, pitch: 60, heading: 30, altitude: close }, { duration: CINE_FALL });
+          setStrike({
+            center: { x: size.width / 2, y: size.height / 2 },
+            rings: rings.map((r) => ({ kind: r.kind, px: Math.min(r.radiusM, R) * (size.height / (2.6 * R)) })),
+            token: strikeToken,
+            cinematic: true,
+          });
+          return;
+        }
         // Screen scale at the impact latitude from a point 50 km east along the parallel.
         const probeM = 50_000;
         const cos = Math.max(Math.cos((location.latitude * Math.PI) / 180), 0.01);
@@ -110,6 +168,7 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
           center: c,
           rings: rings.map((r) => ({ kind: r.kind, px: r.radiusM * pxPerM })),
           token: strikeToken,
+          cinematic: false,
         });
       } catch {
         if (!cancelled) reveal();
@@ -129,21 +188,78 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
     return () => clearTimeout(t);
   }, [ringsHidden]);
 
+  // Cinematic: after impact, grow the real map rings (~20 fps) while the camera
+  // pulls back and circles, then settle top-down and hand over.
+  useEffect(() => {
+    if (!impactAt) return;
+    const m = map.current;
+    const R = Math.min(rings[0]?.radiusM ?? FALLBACK_FRAME_RADIUS_M, CINE_MAX_FRAME_M);
+    const tick = setInterval(() => {
+      const e = Date.now() - impactAt;
+      if (e >= CINE_GROW) {
+        clearInterval(tick);
+        setGrowth(CINE_GROW);
+      } else setGrowth(Math.max(e, 1));
+    }, 50);
+    m?.animateCamera({ center: location, pitch: 50, heading: 75, altitude: R * 3.4 }, { duration: CINE_GROW + 300 });
+    const orbit = setTimeout(() => {
+      map.current?.animateCamera({ heading: 115 }, { duration: CINE_ORBIT });
+    }, CINE_GROW + 300);
+    const settle = setTimeout(() => {
+      map.current?.animateCamera({ center: location, pitch: 0, heading: 0 }, { duration: CINE_SETTLE });
+    }, CINE_GROW + 300 + CINE_ORBIT);
+    const frame = setTimeout(() => {
+      map.current?.animateToRegion(region, 400);
+    }, CINE_GROW + 300 + CINE_ORBIT + CINE_SETTLE);
+    const done = setTimeout(() => {
+      setGrowth(null);
+      setCameraFree(false);
+      setImpactAt(0);
+      reveal();
+    }, CINE_GROW + 300 + CINE_ORBIT + CINE_SETTLE + 450);
+    return () => {
+      clearInterval(tick);
+      clearTimeout(orbit);
+      clearTimeout(settle);
+      clearTimeout(frame);
+      clearTimeout(done);
+    };
+    // One run per impact.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [impactAt]);
+
   const onImpact = () => {
+    const big = strike?.cinematic ?? false;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
-    setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}), 160);
+    setTimeout(
+      () => Haptics.impactAsync(big ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Medium).catch(() => {}),
+      140,
+    );
+    if (big) {
+      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}), 320);
+      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}), 560);
+      setImpactAt(Date.now());
+    }
     shake.setValue(0);
-    Animated.timing(shake, { toValue: 1, duration: 420, useNativeDriver: true }).start();
+    Animated.timing(shake, { toValue: 1, duration: big ? 700 : 420, useNativeDriver: true }).start();
   };
 
+  const k = strike?.cinematic ? 2 : 1;
   const shakeX = shake.interpolate({
     inputRange: [0, 0.1, 0.25, 0.4, 0.55, 0.7, 0.85, 1],
-    outputRange: [0, -7, 6, -5, 4, -2, 1, 0],
+    outputRange: [0, -7 * k, 6 * k, -5 * k, 4 * k, -2 * k, 1 * k, 0],
   });
   const shakeY = shake.interpolate({
     inputRange: [0, 0.15, 0.3, 0.5, 0.7, 1],
-    outputRange: [0, 5, -4, 3, -1, 0],
+    outputRange: [0, 5 * k, -4 * k, 3 * k, -1 * k, 0],
   });
+
+  const maxR = rings[0]?.radiusM ?? 0;
+  /** Radius of a ring at this moment: full size unless the cinematic is growing it. */
+  const radiusNow = (r: number) => {
+    if (growth === null) return r;
+    return r * easeOut(growth / (450 + 1100 * Math.sqrt(r / Math.max(maxR, 1))));
+  };
 
   return (
     <Animated.View
@@ -157,25 +273,37 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
         onMapReady={() => setReady(true)}
         userInterfaceStyle="dark"
         showsPointsOfInterests={false}
-        pitchEnabled={false}
-        rotateEnabled={false}
+        pitchEnabled={cameraFree}
+        rotateEnabled={cameraFree}
         toolbarEnabled={false}
       >
         {!ringsHidden &&
           rings.map((ring) => {
             const s = RING_STYLE[ring.kind];
+            const radius = radiusNow(ring.radiusM);
+            if (radius < 1) return null;
             return (
               <Circle
                 key={ring.kind}
                 center={location}
-                radius={ring.radiusM}
+                radius={radius}
                 fillColor={s.fill}
                 strokeColor={s.stroke}
                 strokeWidth={1.5}
               />
             );
           })}
-        {!ringsHidden && lockedRing && (
+        {growth !== null && growth > 0 && growth < 1500 && maxR > 0 && (
+          // Cinematic shock front: a bright ring running just ahead of the largest wave.
+          <Circle
+            center={location}
+            radius={maxR * 1.06 * easeOut(growth / 1500)}
+            strokeColor={`rgba(255,255,255,${(0.9 * (1 - growth / 1500)).toFixed(2)})`}
+            fillColor="rgba(0,0,0,0)"
+            strokeWidth={2.5}
+          />
+        )}
+        {!ringsHidden && growth === null && lockedRing && (
           <>
             <Circle
               center={location}
@@ -212,7 +340,11 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
           center={strike.center}
           rings={strike.rings}
           onImpact={onImpact}
-          onDone={reveal}
+          // The cinematic hands over itself, once the camera has settled.
+          onDone={strike.cinematic ? () => {} : reveal}
+          fallMs={strike.cinematic ? CINE_FALL : undefined}
+          intensity={strike.cinematic ? 1.6 : 1}
+          drawRings={!strike.cinematic}
         />
       )}
     </Animated.View>

@@ -5,6 +5,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { AdBanner } from '../ads/AdBanner';
 import { useAds } from '../ads/ads';
+import { AftermathTimeline } from '../components/AftermathTimeline';
 import { GlobeView } from '../components/GlobeView';
 import { GLOBE_AVAILABLE_ABOVE_M, GLOBE_DEFAULT_ABOVE_M } from '../components/globe';
 import { ImpactMap } from '../components/ImpactMap';
@@ -24,6 +25,7 @@ import {
   formatYears,
   hiroshimaPercent,
 } from '../physics/format';
+import { aftermath } from '../physics/aftermath';
 import type { Ring } from '../physics/impact';
 import { presetText } from '../physics/presets';
 import { usePremium } from '../state/premium';
@@ -41,7 +43,7 @@ export default function Result() {
   const { isPro, price } = usePremium();
   const { postAdNudge, dismissNudge } = useAds();
   const upsell = useUpsell();
-  const { run, unlockBurnsForRun } = upsell;
+  const { run, unlockForRun } = upsell;
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const world = useWorld();
@@ -52,15 +54,28 @@ export default function Result() {
   const [playedToken, setPlayedToken] = useState(0);
   const [view, setView] = useState<'map' | 'globe'>('map');
 
-  // A burns unlock earned from a rewarded ad applies to the strike on screen.
+  // Unlocks earned from a rewarded ad apply to the strike on screen.
   const burnsTicket = hasTicket(upsell.state, 'burns');
+  const aftermathTicket = hasTicket(upsell.state, 'aftermath');
+  const cinematicTicket = hasTicket(upsell.state, 'cinematic');
   useEffect(() => {
-    if (!isPro && burnsTicket) unlockBurnsForRun();
-  }, [isPro, burnsTicket, unlockBurnsForRun]);
+    if (!isPro && burnsTicket) unlockForRun('burns');
+  }, [isPro, burnsTicket, unlockForRun]);
+  useEffect(() => {
+    if (!isPro && aftermathTicket) unlockForRun('aftermath');
+  }, [isPro, aftermathTicket, unlockForRun]);
+  useEffect(() => {
+    if (!isPro && cinematicTicket && !run?.cinematic) unlockForRun('cinematic');
+  }, [isPro, cinematicTicket, run?.cinematic, unlockForRun]);
 
   if (!result || !location) return <Redirect href="/" />;
 
   const burnsUnlocked = isPro || !!run?.burns;
+  const cinematic = isPro || !!run?.cinematic;
+  // Becoming cinematic (Pro bought, or an ad watched) changes the token, so the
+  // strike plays again straight away in the new style.
+  const token = strikeToken * 2 + (cinematic ? 1 : 0);
+  const stages = aftermath(result);
   const rings = visibleRings(result.rings, burnsUnlocked);
   const energy = formatEnergyMt(result.effectiveEnergyMt);
   const hiroshima =
@@ -81,7 +96,7 @@ export default function Result() {
   // The map is the show: edge to edge, most of the first screen.
   const mapHeight = Math.max(380, Math.round(height * 0.62));
   const globalFraction = world.lastStrike?.impact.globalFraction ?? 0;
-  const strikeDone = playedToken === strikeToken;
+  const strikeDone = playedToken === token;
   const focusRing = focus ? rings.find((r) => r.kind === focus) : undefined;
   const replay = () => {
     setFocus(null);
@@ -108,14 +123,15 @@ export default function Result() {
                 rings={rings}
                 focusRadiusM={focusRing?.radiusM ?? null}
                 // Only unplayed strikes animate, so flipping back from the globe doesn't replay.
-                strikeToken={playedToken === strikeToken ? 0 : strikeToken}
+                strikeToken={playedToken === token ? 0 : token}
                 // Continent-sized rings read better on the globe once the strike has played.
                 onStrikeEnd={() => {
-                  setPlayedToken(strikeToken);
+                  setPlayedToken(token);
                   if (largest >= GLOBE_DEFAULT_ABOVE_M) setView('globe');
                 }}
                 lockedRing={lockedThermal}
                 onLockedPress={() => openBurns('burns-tag')}
+                cinematic={cinematic}
               />
               <RingLegend
                 rings={rings}
@@ -164,6 +180,16 @@ export default function Result() {
             <Pressable onPress={replay} style={styles.tool} accessibilityRole="button" accessibilityLabel={t('result.replayA11y')}>
               <Text style={styles.toolText}>{t('result.replay')}</Text>
             </Pressable>
+            {!cinematic && view === 'map' && (
+              <Pressable
+                onPress={() => upsell.openPaywall('cinematic', 'cinematic-chip', 'cinematic')}
+                style={[styles.tool, styles.proTool]}
+                accessibilityRole="button"
+                accessibilityLabel={t('result.cinematicA11y')}
+              >
+                <Text style={styles.toolText}>{t('result.cinematicPro')}</Text>
+              </Pressable>
+            )}
             {globeAvailable && (
               <View style={styles.segment}>
                 {(['map', 'globe'] as const).map((v) => (
@@ -192,6 +218,13 @@ export default function Result() {
           </Text>
           <Text style={styles.multiple}>{hiroshima}</Text>
         </View>
+
+        <AftermathTimeline
+          stages={stages}
+          units={units}
+          unlocked={isPro || !!run?.aftermath}
+          onUnlock={() => upsell.openPaywall('aftermath', 'aftermath-stage', 'aftermath')}
+        />
 
         <View style={styles.grid}>
           {airburst ? (
@@ -376,6 +409,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   toolText: { fontSize: 12, color: colors.text, fontFamily: fonts.bodySemi },
+  proTool: { borderColor: 'rgba(255,107,74,0.7)', marginLeft: 8, marginRight: 'auto' },
   segment: {
     flexDirection: 'row',
     backgroundColor: 'rgba(11,14,23,0.88)',

@@ -7,7 +7,9 @@
  *  - one free strike with each Pro preset ("free try"), remembered forever;
  *  - a one-strike "ticket" for any locked item after watching a rewarded ad.
  *    Tickets are granted only when the ad's reward event fires and are spent by
- *    the next simulation that uses the item.
+ *    the next simulation that uses the item. At most REWARDED_PER_DAY a day, so
+ *    ads let people sample Pro without replacing it;
+ *  - the cinematic strike on their very first simulation, as a taste.
  */
 import type { Composition } from '../physics/impact';
 
@@ -15,17 +17,24 @@ export type PresetId = 'tunguska' | 'chelyabinsk' | 'chicxulub';
 export const PRESET_IDS: PresetId[] = ['tunguska', 'chelyabinsk', 'chicxulub'];
 
 /** Anything a free user can see but not use. */
-export type LockedItem = 'iron' | 'comet' | 'burns' | PresetId;
+export type LockedItem = 'iron' | 'comet' | 'burns' | 'cinematic' | 'aftermath' | PresetId;
 
 /** Paywall topics; `ads` has no item to try. */
-export type Feature = 'burns' | 'compositions' | 'presets' | 'ads';
-export const FEATURES: Feature[] = ['burns', 'compositions', 'presets', 'ads'];
+export type Feature = 'burns' | 'compositions' | 'presets' | 'cinematic' | 'aftermath' | 'ads';
+export const FEATURES: Feature[] = ['burns', 'compositions', 'presets', 'cinematic', 'aftermath', 'ads'];
+
+/** Rewarded-ad unlocks a free user can earn per calendar day. */
+export const REWARDED_PER_DAY = 3;
 
 export interface UpsellState {
   /** Presets whose free strike has been used. */
   freeTriesUsed: PresetId[];
   /** Rewarded-ad unlocks waiting to be spent, one strike each. */
   tickets: LockedItem[];
+  /** The one-off cinematic strike has been shown. */
+  cinematicTasted?: boolean;
+  /** Rewarded unlocks earned on `day` (local YYYY-MM-DD). */
+  rewards?: { day: string; count: number };
 }
 
 export const EMPTY_STATE: UpsellState = { freeTriesUsed: [], tickets: [] };
@@ -40,7 +49,9 @@ export function isPresetId(x: unknown): x is PresetId {
 }
 
 export function isLockedItem(x: unknown): x is LockedItem {
-  return x === 'iron' || x === 'comet' || x === 'burns' || isPresetId(x);
+  return (
+    x === 'iron' || x === 'comet' || x === 'burns' || x === 'cinematic' || x === 'aftermath' || isPresetId(x)
+  );
 }
 
 export function isFeature(x: unknown): x is Feature {
@@ -48,7 +59,7 @@ export function isFeature(x: unknown): x is Feature {
 }
 
 export function featureFor(item: LockedItem): Feature {
-  if (item === 'burns') return 'burns';
+  if (item === 'burns' || item === 'cinematic' || item === 'aftermath') return item;
   if (item === 'iron' || item === 'comet') return 'compositions';
   return 'presets';
 }
@@ -110,6 +121,36 @@ export function planSimulation(s: UpsellState, sel: Selection, isPro: boolean): 
   return { ok: true, next, freeTry, spent };
 }
 
+/**
+ * Whether this strike plays the cinematic sequence: always for Pro, once as a
+ * taste on a free user's first strike, or when a rewarded ticket is waiting
+ * (which it spends).
+ */
+export function planCinematic(s: UpsellState, isPro: boolean): { cinematic: boolean; next: UpsellState } {
+  if (isPro) return { cinematic: true, next: s };
+  if (!s.cinematicTasted) return { cinematic: true, next: { ...s, cinematicTasted: true } };
+  if (hasTicket(s, 'cinematic')) return { cinematic: true, next: spendTicket(s, 'cinematic') };
+  return { cinematic: false, next: s };
+}
+
+/** Local calendar day, e.g. "2026-09-30". */
+export function dayKey(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/** Rewarded unlocks still available today. */
+export function rewardsLeft(s: UpsellState, today: string): number {
+  const used = s.rewards?.day === today ? s.rewards.count : 0;
+  return Math.max(0, REWARDED_PER_DAY - used);
+}
+
+/** Count one rewarded unlock against today's limit. */
+export function recordReward(s: UpsellState, today: string): UpsellState {
+  const count = s.rewards?.day === today ? s.rewards.count + 1 : 1;
+  return { ...s, rewards: { day: today, count } };
+}
+
 /** Grant a one-strike unlock. Call only after the rewarded ad's reward event. */
 export function grantTicket(s: UpsellState, item: LockedItem): UpsellState {
   return hasTicket(s, item) ? s : { ...s, tickets: [...s.tickets, item] };
@@ -145,7 +186,16 @@ export function parseState(raw: string | null): UpsellState {
     const v = JSON.parse(raw) as Partial<Record<keyof UpsellState, unknown>>;
     const list = <T>(x: unknown, ok: (y: unknown) => y is T): T[] =>
       Array.isArray(x) ? [...new Set(x.filter(ok))] : [];
-    return { freeTriesUsed: list(v.freeTriesUsed, isPresetId), tickets: list(v.tickets, isLockedItem) };
+    const out: UpsellState = {
+      freeTriesUsed: list(v.freeTriesUsed, isPresetId),
+      tickets: list(v.tickets, isLockedItem),
+    };
+    if (v.cinematicTasted === true) out.cinematicTasted = true;
+    const r = v.rewards as { day?: unknown; count?: unknown } | undefined;
+    if (r && typeof r.day === 'string' && typeof r.count === 'number' && r.count >= 0) {
+      out.rewards = { day: r.day, count: Math.floor(r.count) };
+    }
+    return out;
   } catch {
     return EMPTY_STATE;
   }
@@ -163,6 +213,8 @@ export type UpgradeSource =
   | 'locked-simulate'
   | 'free-try-card'
   | 'ad-nudge'
+  | 'cinematic-chip'
+  | 'aftermath-stage'
   | 'other';
 
 export const UPGRADE_SOURCES: UpgradeSource[] = [
@@ -174,6 +226,8 @@ export const UPGRADE_SOURCES: UpgradeSource[] = [
   'locked-simulate',
   'free-try-card',
   'ad-nudge',
+  'cinematic-chip',
+  'aftermath-stage',
   'other',
 ];
 

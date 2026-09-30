@@ -1,4 +1,9 @@
 import {
+  REWARDED_PER_DAY,
+  dayKey,
+  planCinematic,
+  recordReward,
+  rewardsLeft,
   EMPTY_STATE,
   EMPTY_STATS,
   accessFor,
@@ -120,5 +125,47 @@ describe('persistence', () => {
       purchased: { 'burns-card': 1 },
       rewarded: { iron: 1 },
     });
+  });
+});
+
+describe('cinematic strike', () => {
+  it('gives free users one cinematic strike, then only with a ticket', () => {
+    const first = planCinematic(EMPTY_STATE, false);
+    expect(first.cinematic).toBe(true);
+    expect(first.next.cinematicTasted).toBe(true);
+    expect(planCinematic(first.next, false).cinematic).toBe(false);
+    const withTicket = grantTicket(first.next, 'cinematic');
+    const plan = planCinematic(withTicket, false);
+    expect(plan.cinematic).toBe(true);
+    expect(plan.next.tickets).toEqual([]);
+  });
+
+  it('is always on for Pro and never spends anything', () => {
+    const s = { ...EMPTY_STATE, cinematicTasted: true };
+    expect(planCinematic(s, true)).toEqual({ cinematic: true, next: s });
+  });
+});
+
+describe('daily rewarded limit', () => {
+  it('allows REWARDED_PER_DAY a day and resets the next day', () => {
+    let s = EMPTY_STATE;
+    for (let i = 0; i < REWARDED_PER_DAY; i++) s = recordReward(s, '2026-09-30');
+    expect(rewardsLeft(s, '2026-09-30')).toBe(0);
+    expect(rewardsLeft(s, '2026-10-01')).toBe(REWARDED_PER_DAY);
+    expect(recordReward(s, '2026-10-01').rewards).toEqual({ day: '2026-10-01', count: 1 });
+  });
+
+  it('uses the local calendar day', () => {
+    expect(dayKey(new Date(2026, 8, 30, 23, 59))).toBe('2026-09-30');
+  });
+
+  it('persists the new fields and drops bad ones', () => {
+    expect(parseState('{"freeTriesUsed":[],"tickets":["cinematic"],"cinematicTasted":true,"rewards":{"day":"2026-09-30","count":2}}')).toEqual({
+      freeTriesUsed: [],
+      tickets: ['cinematic'],
+      cinematicTasted: true,
+      rewards: { day: '2026-09-30', count: 2 },
+    });
+    expect(parseState('{"freeTriesUsed":[],"tickets":[],"rewards":{"day":5}}')).toEqual(EMPTY_STATE);
   });
 });

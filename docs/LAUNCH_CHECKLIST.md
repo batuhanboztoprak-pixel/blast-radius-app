@@ -72,6 +72,11 @@ npx eas-cli@latest submit --platform ios
 
 ## 6. Before release: test on device
 
+- [ ] Cinematic strike (fresh install = first strike is cinematic): the camera starts high, dives in tilted as the meteor falls, the rings grow on the map from the impact, the camera pulls back and circles, then it settles top-down with the legend working. Check a 20 m airburst, a 450 m impact and Chicxulub. On the second strike a free user gets the normal animation and a "🎬 Cinematic · Pro" chip; watching an ad from it replays the strike cinematically.
+- [ ] Reduce Motion on: no camera moves, rings appear directly.
+- [ ] Aftermath timeline: tap each stage. Free users can read the first two; the others show the lock and open the paywall on the timeline. A small impact (25 m) shows only two stages ending with "no lasting effects". Chicxulub shows the impact winter with the Brugger et al. source line. Imperial units show °F and mi².
+- [ ] Rewarded ads: after 3 ad unlocks in a day the paywall hides "Watch a short ad" and says to come back tomorrow; the count resets the next day.
+
 - [ ] Search, tap-to-drop, and "use my location" all place the pin.
 - [ ] Rings render for a small airburst (e.g. 40 m), a mid-size impact (450 m), and Chicxulub.
 - [ ] Strike animation: the meteor lands exactly on the pin, the expanding rings end at the same size as the map rings (no jump when they swap), the phone buzzes on impact, and **Replay** works after zooming to a ring.

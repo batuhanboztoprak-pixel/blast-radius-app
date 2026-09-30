@@ -34,6 +34,8 @@ export function PaywallArt({ feature, width }: { feature: Feature; width: number
       {feature === 'presets' && <PresetsArt />}
       {feature === 'compositions' && <CompositionsArt width={width} />}
       {feature === 'ads' && <AdsArt width={width} />}
+      {feature === 'cinematic' && <CinematicArt width={width} />}
+      {feature === 'aftermath' && <AftermathArt width={width} />}
     </View>
   );
 }
@@ -97,6 +99,83 @@ function BurnsArt({ width }: { width: number }) {
         <Circle cx={cx} cy={cy} r={20} fill="url(#fire)" />
       </Svg>
     </>
+  );
+}
+
+/** A tilted map: perspective grid, rings squashed into ellipses, a meteor diving in. */
+function CinematicArt({ width }: { width: number }) {
+  const pulse = usePulse(1600);
+  const cx = width / 2;
+  const cy = H * 0.66;
+  const glow = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] });
+  const lines = Array.from({ length: 9 }, (_, i) => i - 4);
+  return (
+    <>
+      <Svg width={width} height={H}>
+        <Defs>
+          <LinearGradient id="tail2" x1="0" y1="1" x2="1" y2="0">
+            <Stop offset="0" stopColor="#FFE9B0" />
+            <Stop offset="0.4" stopColor={colors.accent} stopOpacity="0.7" />
+            <Stop offset="1" stopColor={colors.accent} stopOpacity="0" />
+          </LinearGradient>
+        </Defs>
+        {/* Perspective grid converging on a far horizon. */}
+        <G stroke="rgba(139,146,168,0.25)" strokeWidth={1}>
+          {lines.map((i) => (
+            <Line key={`v${i}`} x1={cx + i * 18} y1={H * 0.18} x2={cx + i * 70} y2={H} />
+          ))}
+          {[0.28, 0.4, 0.55, 0.74, 0.98].map((f) => (
+            <Line key={`h${f}`} x1={0} y1={H * f} x2={width} y2={H * f} />
+          ))}
+        </G>
+        <Path
+          d={`M ${cx - 120} ${cy} A 120 34 0 1 0 ${cx + 120} ${cy} A 120 34 0 1 0 ${cx - 120} ${cy}`}
+          fill={RING_STYLE.windows.fill}
+          stroke={RING_STYLE.windows.stroke}
+          strokeWidth={1.5}
+        />
+        <Path
+          d={`M ${cx - 62} ${cy} A 62 18 0 1 0 ${cx + 62} ${cy} A 62 18 0 1 0 ${cx - 62} ${cy}`}
+          fill={RING_STYLE.severe.fill}
+          stroke={RING_STYLE.severe.stroke}
+          strokeWidth={1.5}
+        />
+        <Line x1={cx + 8} y1={cy - 10} x2={cx + 110} y2={cy - 110} stroke="url(#tail2)" strokeWidth={5} strokeLinecap="round" />
+      </Svg>
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: glow }]}>
+        <Svg width={width} height={H}>
+          <Defs>
+            <RadialGradient id="blast" cx="50%" cy="50%" r="50%">
+              <Stop offset="0" stopColor="#FFFBEA" />
+              <Stop offset="0.35" stopColor="#FFD166" />
+              <Stop offset="1" stopColor={colors.accent} stopOpacity="0" />
+            </RadialGradient>
+          </Defs>
+          <Circle cx={cx} cy={cy - 6} r={26} fill="url(#blast)" />
+        </Svg>
+      </Animated.View>
+    </>
+  );
+}
+
+/** Six stops from second 0 to years later. */
+function AftermathArt({ width }: { width: number }) {
+  const stops = ['impact', 'blast', 'ejecta', 'fires', 'sky', 'climate'] as const;
+  const x0 = 28;
+  const x1 = width - 28;
+  const y = H / 2 - 8;
+  const step = (x1 - x0) / (stops.length - 1);
+  const tint = ['#FFD166', colors.yellow, '#C9A27A', colors.accent, '#6B7385', colors.blue];
+  return (
+    <Svg width={width} height={H}>
+      <Line x1={x0} y1={y} x2={x1} y2={y} stroke={colors.border} strokeWidth={2} />
+      {stops.map((id, i) => (
+        <G key={id}>
+          <Circle cx={x0 + i * step} cy={y} r={i === 0 ? 12 : 9} fill={tint[i]} opacity={i === 0 ? 1 : 0.85} />
+          <Circle cx={x0 + i * step} cy={y} r={i === 0 ? 18 : 14} fill="none" stroke={tint[i]} strokeOpacity={0.35} />
+        </G>
+      ))}
+    </Svg>
   );
 }
 

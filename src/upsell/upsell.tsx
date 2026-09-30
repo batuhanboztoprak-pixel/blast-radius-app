@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
+import { AppState } from 'react-native';
 import {
   createContext,
   useCallback,
@@ -17,10 +18,14 @@ import {
   EMPTY_STATS,
   accessFor,
   countStat,
+  dayKey,
   grantTicket,
   hasTicket,
   parseState,
   parseStats,
+  planCinematic,
+  recordReward,
+  rewardsLeft,
   spendTicket,
   type Access,
   type Feature,
@@ -42,7 +47,14 @@ export interface Run {
   freeTry: PresetId | null;
   /** The burns ring is unlocked for this strike (rewarded ad). */
   burns: boolean;
+  /** This strike plays the cinematic sequence (Pro, first-strike taste or ticket). */
+  cinematic: boolean;
+  /** The whole aftermath timeline is unlocked for this strike (rewarded ad). */
+  aftermath: boolean;
 }
+
+/** Items a ticket can unlock for the strike already on screen. */
+export type RunItem = 'burns' | 'cinematic' | 'aftermath';
 
 interface UpsellContext {
   state: UpsellState;
@@ -50,10 +62,12 @@ interface UpsellContext {
   /** Commit a plan from planSimulation() when the user taps Simulate. */
   beginRun: (plan: Extract<SimulationPlan, { ok: true }>) => void;
   run: Run | null;
-  /** Spend a burns ticket on the strike being shown, if there is one. */
-  unlockBurnsForRun: () => void;
+  /** Spend a ticket on the strike being shown, if there is one. */
+  unlockForRun: (item: RunItem) => void;
   /** Call only from the rewarded ad's reward event. */
   grant: (item: LockedItem) => void;
+  /** Rewarded unlocks left today (free users; see REWARDED_PER_DAY). */
+  rewardsLeftToday: number;
   openPaywall: (feature: Feature, source: UpgradeSource, item?: LockedItem) => void;
   stats: UpgradeStats;
   resetStats: () => void;
@@ -66,6 +80,16 @@ export function UpsellProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<UpsellState>(EMPTY_STATE);
   const [stats, setStats] = useState<UpgradeStats>(EMPTY_STATS);
   const [run, setRun] = useState<Run | null>(null);
+  /** Today's date for the daily rewarded limit, refreshed when the app comes back. */
+  const [today, setToday] = useState('');
+  useEffect(() => {
+    const refresh = () => setToday(dayKey(new Date()));
+    refresh();
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') refresh();
+    });
+    return () => sub.remove();
+  }, []);
   const runId = useRef(0);
   /** The prompt that opened the paywall most recently this session. */
   const lastSource = useRef<UpgradeSource | null>(null);
@@ -76,9 +100,15 @@ export function UpsellProvider({ children }: { children: ReactNode }) {
         // Merge with anything earned before storage finished loading.
         setState((cur) => {
           const saved = parseState(s);
+          const rewards =
+            saved.rewards && cur.rewards && saved.rewards.day === cur.rewards.day
+              ? { day: cur.rewards.day, count: saved.rewards.count + cur.rewards.count }
+              : (cur.rewards ?? saved.rewards);
           return {
             freeTriesUsed: [...new Set([...saved.freeTriesUsed, ...cur.freeTriesUsed])],
             tickets: [...new Set([...saved.tickets, ...cur.tickets])],
+            ...(saved.cinematicTasted || cur.cinematicTasted ? { cinematicTasted: true } : {}),
+            ...(rewards ? { rewards } : {}),
           };
         });
         setStats(parseStats(st));
@@ -114,22 +144,32 @@ export function UpsellProvider({ children }: { children: ReactNode }) {
 
   const beginRun = useCallback<UpsellContext['beginRun']>(
     (plan) => {
-      update(() => plan.next);
+      const cine = planCinematic(plan.next, isPro);
+      update(() => cine.next);
       runId.current += 1;
-      setRun({ id: runId.current, freeTry: plan.freeTry, burns: false });
+      setRun({
+        id: runId.current,
+        freeTry: plan.freeTry,
+        burns: isPro,
+        cinematic: cine.cinematic,
+        aftermath: isPro,
+      });
     },
-    [update],
+    [update, isPro],
   );
 
-  const unlockBurnsForRun = useCallback(() => {
-    if (!run || run.burns || !hasTicket(state, 'burns')) return;
-    update((s) => spendTicket(s, 'burns'));
-    setRun({ ...run, burns: true });
-  }, [run, state, update]);
+  const unlockForRun = useCallback(
+    (item: RunItem) => {
+      if (!run || run[item] || !hasTicket(state, item)) return;
+      update((s) => spendTicket(s, item));
+      setRun({ ...run, [item]: true });
+    },
+    [run, state, update],
+  );
 
   const grant = useCallback(
     (item: LockedItem) => {
-      update((s) => grantTicket(s, item));
+      update((s) => recordReward(grantTicket(s, item), dayKey(new Date())));
       bump('rewarded', item);
     },
     [update, bump],
@@ -155,13 +195,14 @@ export function UpsellProvider({ children }: { children: ReactNode }) {
       access: (item) => accessFor(state, item, isPro),
       beginRun,
       run,
-      unlockBurnsForRun,
+      unlockForRun,
       grant,
+      rewardsLeftToday: isPro ? 0 : rewardsLeft(state, today),
       openPaywall,
       stats,
       resetStats,
     }),
-    [state, isPro, beginRun, run, unlockBurnsForRun, grant, openPaywall, stats, resetStats],
+    [state, isPro, today, beginRun, run, unlockForRun, grant, openPaywall, stats, resetStats],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

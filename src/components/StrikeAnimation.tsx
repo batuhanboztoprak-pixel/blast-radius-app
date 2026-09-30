@@ -21,9 +21,19 @@ interface Props {
   onImpact: () => void;
   /** Fired when the shockwaves have reached their final size. */
   onDone: () => void;
+  /** How long the meteor takes to fall, ms. The cinematic strike falls slower. */
+  fallMs?: number;
+  /** Scales the fireball, flash, meteor and debris (cinematic uses ~1.6). */
+  intensity?: number;
+  /**
+   * Draw the expanding rings and shock front here. The cinematic strike grows
+   * the real map circles instead, because screen-space circles don't match a
+   * tilted map.
+   */
+  drawRings?: boolean;
 }
 
-const FALL_MS = 650;
+const DEFAULT_FALL_MS = 650;
 const TAIL = 140;
 /** Views larger than this are pointless (off screen) and cost memory. */
 const MAX_RING_PX = 1600;
@@ -41,7 +51,18 @@ const jitter = (n: number) => {
  * smallest first, with a bright shock front leading the way. Every animation
  * runs on the native driver (transforms and opacity only).
  */
-export function StrikeAnimation({ width, height, center, rings, onImpact, onDone }: Props) {
+export function StrikeAnimation({
+  width,
+  height,
+  center,
+  rings,
+  onImpact,
+  onDone,
+  fallMs = DEFAULT_FALL_MS,
+  intensity = 1,
+  drawRings = true,
+}: Props) {
+  const FALL_MS = fallMs;
   const fall = useState(() => new Animated.Value(0))[0];
   const flash = useState(() => new Animated.Value(0))[0];
   const fire = useState(() => new Animated.Value(0))[0];
@@ -52,7 +73,7 @@ export function StrikeAnimation({ width, height, center, rings, onImpact, onDone
 
   const maxPx = Math.min(Math.max(...rings.map((r) => r.px), 60), MAX_RING_PX);
   const crater = rings.find((r) => r.kind === 'crater')?.px ?? 0;
-  const fireR = Math.min(Math.max(crater * 2.5, 34), 150);
+  const fireR = Math.min(Math.max(crater * 2.5, 34) * intensity, 150 * intensity);
   const travel = Math.hypot(width, height);
 
   // Debris directions look random but are deterministic (render must stay pure).
@@ -61,7 +82,7 @@ export function StrikeAnimation({ width, height, center, rings, onImpact, onDone
       Array.from({ length: DEBRIS }, (_, i) => {
         const j = jitter(i);
         const a = (i / DEBRIS) * 2 * Math.PI + j * 0.4;
-        const d = Math.min(maxPx * (0.35 + jitter(i + 31) * 0.35), 220);
+        const d = Math.min(maxPx * (0.35 + jitter(i + 31) * 0.35), 220) * intensity;
         return { dx: Math.cos(a) * d, dy: Math.sin(a) * d, s: 2 + jitter(i + 57) * 3 };
       }),
     [maxPx],
@@ -83,8 +104,8 @@ export function StrikeAnimation({ width, height, center, rings, onImpact, onDone
       Animated.timing(fall, { toValue: 1, duration: FALL_MS, easing: Easing.in(Easing.quad), ...native }),
       Animated.parallel([
         Animated.sequence([
-          Animated.timing(flash, { toValue: 1, duration: 70, ...native }),
-          Animated.timing(flash, { toValue: 0, duration: 420, easing: Easing.out(Easing.quad), ...native }),
+          Animated.timing(flash, { toValue: 1, duration: 70 * intensity, ...native }),
+          Animated.timing(flash, { toValue: 0, duration: 420 * intensity, easing: Easing.out(Easing.quad), ...native }),
         ]),
         Animated.timing(fire, { toValue: 1, duration: 1300, easing: Easing.out(Easing.quad), ...native }),
         Animated.timing(front, { toValue: 1, duration: 1500, easing: Easing.out(Easing.cubic), ...native }),
@@ -116,7 +137,7 @@ export function StrikeAnimation({ width, height, center, rings, onImpact, onDone
   return (
     <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity: fade }]}>
       {/* Expanding damage rings, drawn largest first so small ones stay on top. */}
-      {rings.map((r, i) => {
+      {drawRings && rings.map((r, i) => {
         const px = Math.min(r.px, MAX_RING_PX);
         const s = RING_STYLE[r.kind];
         return (
@@ -141,7 +162,7 @@ export function StrikeAnimation({ width, height, center, rings, onImpact, onDone
       })}
 
       {/* Shock front: a thin bright ring running just ahead of the largest wave. */}
-      <Animated.View
+      {drawRings && <Animated.View
         style={[
           styles.front,
           {
@@ -154,7 +175,7 @@ export function StrikeAnimation({ width, height, center, rings, onImpact, onDone
             transform: [{ scale: front.interpolate({ inputRange: [0, 1], outputRange: [0.01, 1] }) }],
           },
         ]}
-      />
+      />}
 
       {/* Debris thrown out of the crater. */}
       {shards.map((d, i) => (

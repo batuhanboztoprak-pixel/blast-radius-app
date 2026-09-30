@@ -59,9 +59,11 @@ those. Pro items are visible, so people can see what they would get:
 | --- | --- | --- |
 | Locked burns ring | Result map, legend, "3RD-DEGREE BURNS" card | Free users see the burns ring faint and dashed with a "Pro" tag (after the strike animation, never in it), plus a card with the value masked. Any of these opens the paywall on the burns feature. The share card never shows it. |
 | Free try per preset | Asteroid screen, result screen | The first strike with each of Tunguska, Chelyabinsk and Chicxulub is free ("Try once free" chip). Afterwards the result shows "That was your free Chicxulub…" with Unlock Pro. Later taps open the paywall. Stored in AsyncStorage. |
-| Watch an ad to try once | Paywall opened from any lock | An AdMob rewarded ad unlocks that one item (iron, comet, a preset or the burns ring) for the next strike only. It's granted only when the reward event fires. The option is hidden when ads are off or no ad has loaded. A burns unlock applies to the result on screen. |
+| Cinematic strike | Result map ("🎬 Cinematic · Pro" chip) | Pro strikes play a tilted 3D camera dive, a bigger flash and fireball, the real map rings growing from the impact while the camera pulls back and circles, then settle top-down. Free users get it once on their first strike, then see the chip. |
+| Aftermath timeline | Result screen, "What happens next" | Stages from second 0 to years later (`src/physics/aftermath.ts`). Free users read the impact and the shock wave; debris, fires, dark skies and climate are Pro. Small impacts simply end after the blast. |
+| Watch an ad to try once | Paywall opened from any lock | An AdMob rewarded ad unlocks that one item (iron, comet, a preset, the burns ring, the cinematic strike or the full timeline) for the next strike only. At most 3 a day (`REWARDED_PER_DAY`), so ads let people sample Pro rather than replace it. It's granted only when the reward event fires. The option is hidden when ads are off or no ad has loaded. A burns unlock applies to the result on screen. |
 | Remove-ads nudge | Bottom of the result screen | After the every-3rd-simulation interstitial closes: "Remove ads for good · {store price}". Dismissable, at most once a session, never for Pro. |
-| Focused paywall | `/paywall?feature=burns\|compositions\|presets\|ads` | Leads with an SVG illustration of that feature, then the perks and a Free vs Pro table. |
+| Focused paywall | `/paywall?feature=burns\|compositions\|presets\|cinematic\|aftermath\|ads` | Leads with an SVG illustration of that feature, then the perks and a Free vs Pro table. |
 
 When a strike has spent a free try or an ad unlock, going back to the asteroid screen
 switches a still-selected locked item back to rock / no preset, so Simulate never lands

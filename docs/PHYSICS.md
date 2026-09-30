@@ -100,6 +100,19 @@ within 40 km of Istanbul (2015); nobody at Tunguska; the grid totals 7.33 billio
 Known gaps: cells are 11 km, so rings smaller than a city block-scale use the cell's average
 density (a 1 km ring in Manhattan is undercounted); no ocean/tsunami casualties.
 
+## Aftermath timeline (`src/physics/aftermath.ts`)
+
+| Stage | Shown when | Numbers |
+| --- | --- | --- |
+| Impact (second 0) | Always | Crater width, or burst altitude; fireball diameter |
+| Shock wave (seconds–minutes) | Always | Arrival at the collapse and window rings at ~340 m/s; ground shaking at ~5 km/s (Collins et al. 2005) |
+| Falling debris (minutes) | Ground impacts | Ejecta blanket thickness t = D_tc⁴ / (112 r³) (Collins et al. eq. 47): where it is 1 m and 1 cm deep |
+| Fires (hours) | Burns ring, or global effects | Area inside the 3rd-degree-burn radius; fires on every continent above the global threshold |
+| Dark skies (days–months) | Crater ≥ 1 km or ≥ 100 Mt; global above 2.5×10⁵ Mt | Qualitative |
+| Climate (years) | ≥ 2.5×10⁵ Mt: a year or more of cooling, failed harvests. ≥ 10⁸ Mt (Chicxulub-class): impact winter | Brugger, Feulner & Petri (2017, GRL): ≥26 °C global cooling, ~3 years below freezing, ~30 years to recover |
+
+Stages that don't apply are left out, so a small impact ends after the shock wave.
+
 ## Known limitations (v1)
 
 - Every target is treated as land — no water layer, no tsunami.
