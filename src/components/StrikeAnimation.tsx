@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Animated, Easing, StyleSheet } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, RadialGradient, Stop, Line } from 'react-native-svg';
 
-import type { Ring } from '../physics/impact';
+import type { Composition, Ring } from '../physics/impact';
+import { METEOR_LOOK } from './CompositionIcon';
 import { RING_STYLE } from './rings';
 
 export interface StrikeRing {
@@ -31,10 +32,11 @@ interface Props {
    * tilted map.
    */
   drawRings?: boolean;
+  /** Rock, iron or comet: each has its own meteor, tail and fireball colours. */
+  composition?: Composition;
 }
 
 const DEFAULT_FALL_MS = 650;
-const TAIL = 140;
 /** Views larger than this are pointless (off screen) and cost memory. */
 const MAX_RING_PX = 1600;
 const DEBRIS = 14;
@@ -61,8 +63,23 @@ export function StrikeAnimation({
   fallMs = DEFAULT_FALL_MS,
   intensity = 1,
   drawRings = true,
+  composition = 'rock',
 }: Props) {
   const FALL_MS = fallMs;
+  const look = METEOR_LOOK[composition];
+  const TAIL = look.tailLength;
+  const sparks = useMemo(
+    () =>
+      look.sparks
+        ? Array.from({ length: 12 }, (_, i) => {
+            const along = 18 + jitter(i + 200) * (TAIL - 30);
+            const off = (jitter(i + 300) - 0.5) * (composition === 'comet' ? 22 : 10);
+            // Points along the tail line (from the head at (10, TAIL) up-right), pushed sideways.
+            return { x: 10 + along * 0.707 + off * 0.707, y: TAIL - along * 0.707 + off * 0.707, r: 0.8 + jitter(i + 400) * 1.6 };
+          })
+        : [],
+    [look.sparks, TAIL, composition],
+  );
   const fall = useState(() => new Animated.Value(0))[0];
   const flash = useState(() => new Animated.Value(0))[0];
   const fire = useState(() => new Animated.Value(0))[0];
@@ -214,10 +231,10 @@ export function StrikeAnimation({
         <Svg width={fireR * 2} height={fireR * 2}>
           <Defs>
             <RadialGradient id="fireball" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor="#FFFBEA" stopOpacity="1" />
-              <Stop offset="0.25" stopColor="#FFD166" stopOpacity="1" />
-              <Stop offset="0.6" stopColor="#FF6B4A" stopOpacity="0.8" />
-              <Stop offset="1" stopColor="#FF6B4A" stopOpacity="0" />
+              <Stop offset="0" stopColor={look.fire[0]} stopOpacity="1" />
+              <Stop offset="0.25" stopColor={look.fire[1]} stopOpacity="1" />
+              <Stop offset="0.6" stopColor={look.fire[2]} stopOpacity="0.8" />
+              <Stop offset="1" stopColor={look.fire[2]} stopOpacity="0" />
             </RadialGradient>
           </Defs>
           <Circle cx={fireR} cy={fireR} r={fireR} fill="url(#fireball)" />
@@ -239,18 +256,25 @@ export function StrikeAnimation({
         <Svg width={TAIL + 10} height={TAIL + 10}>
           <Defs>
             <LinearGradient id="tail" x1="0" y1="1" x2="1" y2="0">
-              <Stop offset="0" stopColor="#FFE9B0" stopOpacity="1" />
-              <Stop offset="0.35" stopColor="#FF6B4A" stopOpacity="0.7" />
-              <Stop offset="1" stopColor="#FF6B4A" stopOpacity="0" />
+              <Stop offset="0" stopColor={look.tail[0]} stopOpacity="1" />
+              <Stop offset="0.35" stopColor={look.tail[1]} stopOpacity="0.7" />
+              <Stop offset="1" stopColor={look.tail[1]} stopOpacity="0" />
             </LinearGradient>
             <RadialGradient id="head" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor="#FFFFFF" stopOpacity="1" />
-              <Stop offset="0.5" stopColor="#FFD166" stopOpacity="0.9" />
-              <Stop offset="1" stopColor="#FF6B4A" stopOpacity="0" />
+              <Stop offset="0" stopColor={look.head[0]} stopOpacity="1" />
+              <Stop offset="0.5" stopColor={look.head[1]} stopOpacity="0.9" />
+              <Stop offset="1" stopColor={look.head[2]} stopOpacity="0" />
             </RadialGradient>
           </Defs>
-          <Line x1={10} y1={TAIL} x2={TAIL + 10} y2={0} stroke="url(#tail)" strokeWidth={5} strokeLinecap="round" />
-          <Circle cx={10} cy={TAIL} r={9} fill="url(#head)" />
+          {composition === 'comet' && (
+            // A comet's second, fainter dust tail, curving away from the ion tail.
+            <Line x1={10} y1={TAIL} x2={TAIL * 0.8} y2={TAIL * 0.12} stroke="url(#tail)" strokeWidth={look.tailWidth * 1.6} strokeLinecap="round" opacity={0.35} />
+          )}
+          <Line x1={10} y1={TAIL} x2={TAIL + 10} y2={0} stroke="url(#tail)" strokeWidth={look.tailWidth} strokeLinecap="round" />
+          {sparks.map((s, i) => (
+            <Circle key={i} cx={s.x} cy={s.y} r={s.r} fill={look.sparks ?? '#fff'} opacity={0.85} />
+          ))}
+          <Circle cx={10} cy={TAIL} r={composition === 'comet' ? 11 : 9} fill="url(#head)" />
         </Svg>
       </Animated.View>
 

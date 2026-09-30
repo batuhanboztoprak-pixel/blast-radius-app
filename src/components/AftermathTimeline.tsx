@@ -21,6 +21,94 @@ interface Props {
 
 const PLAY_STEP_MS = 3000;
 
+/** One fact as a sentence in the user's language and units. */
+export function factText(f: Stage['facts'][number], units: Units): string {
+  const params: Record<string, string> = {};
+  if (f.dist !== undefined) params.dist = formatDistance(f.dist, units);
+  if (f.time !== undefined) params.time = formatDuration(f.time);
+  if (f.area !== undefined) params.area = formatArea(f.area, units);
+  if (f.drop !== undefined) params.drop = formatTempDrop(f.drop, units);
+  if (f.m !== undefined) params.m = dec(f.m, 1);
+  return t(f.key as MessageKey, params);
+}
+
+/**
+ * The selected stage, shown over the bottom of the map so the picture and the
+ * words are on screen together. Arrows step through the stages; ✕ goes back to
+ * the normal damage rings.
+ */
+export function StageCaption({
+  stages,
+  selected,
+  units,
+  unlocked,
+  onSelect,
+  onClose,
+  onUnlock,
+}: {
+  stages: Stage[];
+  selected: StageId;
+  units: Units;
+  unlocked: boolean;
+  onSelect: (id: StageId) => void;
+  onClose: () => void;
+  onUnlock: () => void;
+}) {
+  const i = stages.findIndex((s) => s.id === selected);
+  const stage = stages[i];
+  if (!stage) return null;
+  const locked = stage.pro && !unlocked;
+  const prev = stages[i - 1];
+  const next = stages[i + 1];
+  return (
+    <View style={styles.caption}>
+      <View style={styles.captionHead}>
+        <Pressable
+          onPress={() => prev && onSelect(prev.id)}
+          disabled={!prev}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={t('af.prev')}
+          style={[styles.arrow, !prev && styles.hidden]}
+        >
+          <Text style={styles.arrowText}>‹</Text>
+        </Pressable>
+        <View style={styles.captionTitleWrap}>
+          <Text style={styles.cardWhen}>
+            {i + 1}/{stages.length} · {t(`af.when.${stage.id}`)}
+          </Text>
+          <Text style={styles.captionTitle}>{t(`af.stage.${stage.id}`)}</Text>
+        </View>
+        <Pressable
+          onPress={() => next && onSelect(next.id)}
+          disabled={!next}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={t('af.next')}
+          style={[styles.arrow, !next && styles.hidden]}
+        >
+          <Text style={styles.arrowText}>›</Text>
+        </Pressable>
+        <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('common.close')} style={styles.arrow}>
+          <Text style={styles.closeText}>✕</Text>
+        </Pressable>
+      </View>
+      {locked ? (
+        <Pressable onPress={onUnlock} accessibilityRole="button" style={styles.captionLock}>
+          <LockIcon size={12} color={colors.accent} />
+          <Text style={styles.captionFact}>{t('af.locked.button')}</Text>
+        </Pressable>
+      ) : (
+        stage.facts.slice(0, 2).map((f) => (
+          <Text key={f.key} style={styles.captionFact} numberOfLines={3}>
+            {factText(f, units)}
+          </Text>
+        ))
+      )}
+    </View>
+  );
+}
+
 /**
  * "What happens next": a row of stages from second 0 to years later. The map
  * above shows each stage; this card explains it with an illustration and, for
@@ -54,15 +142,7 @@ export function AftermathTimeline({ stages, units, unlocked, selected, onSelect,
   if (!stage) return null;
   const locked = stage.pro && !unlocked;
 
-  const fill = (f: Stage['facts'][number]) => {
-    const params: Record<string, string> = {};
-    if (f.dist !== undefined) params.dist = formatDistance(f.dist, units);
-    if (f.time !== undefined) params.time = formatDuration(f.time);
-    if (f.area !== undefined) params.area = formatArea(f.area, units);
-    if (f.drop !== undefined) params.drop = formatTempDrop(f.drop, units);
-    if (f.m !== undefined) params.m = dec(f.m, 1);
-    return t(f.key as MessageKey, params);
-  };
+  const fill = (f: Stage['facts'][number]) => factText(f, units);
 
   const winter = stage.facts.find((f) => f.key === 'af.climate.winter');
 
@@ -350,5 +430,26 @@ const styles = StyleSheet.create({
   mapHint: { fontSize: 11, color: colors.muted, fontFamily: fonts.bodyMedium },
   unlock: { marginTop: 4, minHeight: 46 },
   chart: { gap: 4, marginTop: 2 },
+  caption: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    bottom: 12,
+    backgroundColor: 'rgba(11,14,23,0.9)',
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 4,
+  },
+  captionHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  captionTitleWrap: { flex: 1, alignItems: 'center' },
+  captionTitle: { fontSize: 15, color: colors.text, fontFamily: fonts.display },
+  captionFact: { fontSize: 12, color: colors.text, fontFamily: fonts.body, lineHeight: 17 },
+  captionLock: { flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center', paddingVertical: 4 },
+  arrow: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center' },
+  arrowText: { fontSize: 26, lineHeight: 28, color: colors.text, fontFamily: fonts.bodySemi },
+  closeText: { fontSize: 14, color: colors.muted, fontFamily: fonts.bodySemi },
   chartNote: { fontSize: 11, color: colors.muted, fontFamily: fonts.body },
 });

@@ -13,13 +13,14 @@ import {
 import MapView, { Circle, Marker } from 'react-native-maps';
 
 import { t } from '../i18n/core';
-import type { Ring } from '../physics/impact';
+import type { Composition, Ring } from '../physics/impact';
 import { colors, fonts } from '../theme';
 import { LockIcon } from './icons';
 import type { ImpactLocation } from '../state/simulation';
 import { regionForRadius } from '../lib/geo';
 import { FALLBACK_FRAME_RADIUS_M, RING_STYLE } from './rings';
-import type { StageCircle } from './aftermathLayers';
+import type { StageCircle, StageEffect } from './aftermathLayers';
+import { StageEffects } from './StageEffects';
 import { StrikeAnimation, type StrikeRing } from './StrikeAnimation';
 
 interface Props {
@@ -40,6 +41,10 @@ interface Props {
   stageCircles?: StageCircle[];
   /** Hide the damage rings while a stage shows its own layers. */
   hideRings?: boolean;
+  /** Animated particles for the selected aftermath stage. */
+  stageEffect?: StageEffect;
+  /** Rock, iron or comet: sets the meteor's look in the strike. */
+  composition?: Composition;
   onLockedPress?: () => void;
   /**
    * Play the cinematic version: the camera dives in tilted with the meteor, the
@@ -84,6 +89,8 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
     cinematic = false,
     stageCircles,
     hideRings = false,
+    stageEffect,
+    composition = 'rock',
     style,
   },
   ref,
@@ -111,6 +118,41 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
     setRingsHidden(false);
     endRef.current?.();
   };
+
+  // --- Aftermath stage particles --------------------------------------------
+  // They're drawn in screen space, so measure the map's scale once it has
+  // settled, and hide them while the map moves.
+  const [effectFrame, setEffectFrame] = useState<{ center: { x: number; y: number }; pxPerM: number } | null>(null);
+  const [moving, setMoving] = useState(false);
+  const [stillMotion, setStillMotion] = useState(false);
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then(setStillMotion)
+      .catch(() => {});
+  }, []);
+  const measureFrame = async () => {
+    const m = map.current;
+    if (!m) return;
+    try {
+      const probeM = 50_000;
+      const cos = Math.max(Math.cos((location.latitude * Math.PI) / 180), 0.01);
+      const dLon = ((probeM / (EARTH_RADIUS_M * cos)) * 180) / Math.PI;
+      const c = await m.pointForCoordinate(location);
+      const p = await m.pointForCoordinate({ latitude: location.latitude, longitude: location.longitude + dLon });
+      const pxPerM = Math.abs(p.x - c.x) / probeM;
+      if (pxPerM > 0) setEffectFrame({ center: c, pxPerM });
+    } catch {
+      setEffectFrame(null);
+    }
+  };
+  const effectKey = stageEffect ? `${stageEffect.kind}:${stageEffect.radiusM}` : '';
+  useEffect(() => {
+    if (!effectKey || !ready) return;
+    // Give a re-framing animation time to finish, then measure.
+    const t = setTimeout(measureFrame, 650);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectKey, ready]);
 
   const frameRadius = focusRadiusM ?? rings[0]?.radiusM ?? FALLBACK_FRAME_RADIUS_M;
   const region = regionForRadius(location.latitude, location.longitude, frameRadius);
@@ -279,6 +321,14 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
         style={StyleSheet.absoluteFill}
         initialRegion={region}
         onMapReady={() => setReady(true)}
+        onRegionChange={() => {
+          if (stageEffect && !moving) setMoving(true);
+        }}
+        onRegionChangeComplete={() => {
+          if (!stageEffect) return;
+          setMoving(false);
+          measureFrame();
+        }}
         userInterfaceStyle="dark"
         showsPointsOfInterests={false}
         pitchEnabled={cameraFree}
@@ -342,6 +392,17 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
         )}
         <Marker coordinate={location} pinColor="#FF6B4A" />
       </MapView>
+      {stageEffect && effectFrame && !moving && growth === null && !ringsHidden && (
+        <StageEffects
+          key={effectKey}
+          width={size.width}
+          height={size.height}
+          center={effectFrame.center}
+          pxPerM={effectFrame.pxPerM}
+          effect={stageEffect}
+          reduceMotion={stillMotion}
+        />
+      )}
       {strike && (
         <StrikeAnimation
           key={strike.token}
@@ -355,6 +416,7 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
           fallMs={strike.cinematic ? CINE_FALL : undefined}
           intensity={strike.cinematic ? 1.6 : 1}
           drawRings={!strike.cinematic}
+          composition={composition}
         />
       )}
     </Animated.View>

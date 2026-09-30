@@ -8,8 +8,18 @@ const stages = aftermath(chx);
 const layers = (id: string) => stageLayers(stages.find((s) => s.id === id), chx);
 
 describe('aftermath map layers', () => {
-  it('keeps the normal rings for the shock wave', () => {
-    expect(layers('blast')).toEqual({ circles: [], hideRings: false, tint: 'none', extentM: null });
+  it('keeps the normal rings for the shock wave, with pulses running out to the window ring', () => {
+    const l = layers('blast');
+    expect([l.circles, l.hideRings, l.tint, l.extentM]).toEqual([[], false, 'none', null]);
+    expect(l.effect?.kind).toBe('shock');
+  });
+
+  it('animates each stage: debris inside the ejecta zone, embers and dust worldwide, snow for the winter', () => {
+    expect(layers('ejecta').effect).toMatchObject({ kind: 'debris' });
+    expect(layers('ejecta').effect!.innerM).toBeLessThan(layers('ejecta').effect!.radiusM!);
+    expect(layers('fires').effect).toEqual({ kind: 'embers', radiusM: null });
+    expect(layers('sky').effect).toEqual({ kind: 'dust', radiusM: null });
+    expect(layers('climate').effect).toEqual({ kind: 'snow', radiusM: null });
   });
 
   it('draws the fireball, ejecta zones and fires as circles', () => {

@@ -5,7 +5,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { AdBanner } from '../ads/AdBanner';
 import { useAds } from '../ads/ads';
-import { AftermathTimeline } from '../components/AftermathTimeline';
+import { AftermathTimeline, StageCaption } from '../components/AftermathTimeline';
 import { TINT_COLOR, stageLayers } from '../components/aftermathLayers';
 import { GlobeView } from '../components/GlobeView';
 import { GLOBE_AVAILABLE_ABOVE_M, GLOBE_DEFAULT_ABOVE_M } from '../components/globe';
@@ -56,6 +56,8 @@ export default function Result() {
   const [view, setView] = useState<'map' | 'globe'>('map');
   // The shock wave is the "normal" map view; other stages paint their own layers.
   const [stageId, setStageId] = useState<StageId>('blast');
+  /** A stage was picked from the timeline: the map shows it with a caption. */
+  const [stageOpen, setStageOpen] = useState(false);
   const scroll = useRef<ScrollView>(null);
 
   // Unlocks earned from a rewarded ad apply to the strike on screen.
@@ -101,11 +103,23 @@ export default function Result() {
   const globalFraction = world.lastStrike?.impact.globalFraction ?? 0;
   const strikeDone = playedToken === token;
   const focusRing = focus ? rings.find((r) => r.kind === focus) : undefined;
-  const layers = stageLayers(stageReadable && strikeDone ? stage : undefined, result);
+  const layers = stageLayers(stageOpen && stageReadable && strikeDone && view === 'map' ? stage : undefined, result);
+  const pickStage = (id: StageId) => {
+    setStageId(id);
+    setStageOpen(true);
+    setFocus(null);
+    if (view !== 'map') setView('map');
+    // Bring the map into view; the caption on it carries the stage's text.
+    scroll.current?.scrollTo({ y: 0, animated: true });
+  };
+  const closeStage = () => {
+    setStageOpen(false);
+    setStageId('blast');
+  };
   const tint = layers.tint !== 'none' ? TINT_COLOR[layers.tint] : null;
   const replay = () => {
     setFocus(null);
-    setStageId('blast');
+    closeStage();
     setView('map');
     setStrikeToken((t) => t + 1);
   };
@@ -130,6 +144,7 @@ export default function Result() {
                 focusRadiusM={focusRing?.radiusM ?? layers.extentM ?? null}
                 stageCircles={layers.circles}
                 hideRings={layers.hideRings}
+                stageEffect={layers.effect}
                 // Only unplayed strikes animate, so flipping back from the globe doesn't replay.
                 strikeToken={playedToken === token ? 0 : token}
                 // Continent-sized rings read better on the globe once the strike has played.
@@ -140,16 +155,29 @@ export default function Result() {
                 lockedRing={lockedThermal}
                 onLockedPress={() => openBurns('burns-tag')}
                 cinematic={cinematic}
+                composition={result.params.composition}
               />
-              <RingLegend
-                rings={rings}
-                selected={focus}
-                onSelect={(k) => {
-                  setFocus(k);
-                  setStageId('blast');
-                }}
-                onLockedThermal={lockedThermal ? () => openBurns('burns-legend') : undefined}
-              />
+              {stageOpen && strikeDone ? (
+                <StageCaption
+                  stages={stages}
+                  selected={stageId}
+                  units={units}
+                  unlocked={aftermathUnlocked}
+                  onSelect={pickStage}
+                  onClose={closeStage}
+                  onUnlock={() => upsell.openPaywall('aftermath', 'aftermath-stage', 'aftermath')}
+                />
+              ) : (
+                <RingLegend
+                  rings={rings}
+                  selected={focus}
+                  onSelect={(k) => {
+                    setFocus(k);
+                    closeStage();
+                  }}
+                  onLockedThermal={lockedThermal ? () => openBurns('burns-legend') : undefined}
+                />
+              )}
             </>
           ) : (
             <View style={styles.globe}>
@@ -230,13 +258,7 @@ export default function Result() {
           units={units}
           unlocked={aftermathUnlocked}
           selected={stageId}
-          onSelect={(id) => {
-            setStageId(id);
-            setFocus(null);
-            if (view !== 'map') setView('map');
-            // Bring the map into view so the stage can be seen on it.
-            scroll.current?.scrollTo({ y: 0, animated: true });
-          }}
+          onSelect={pickStage}
           onUnlock={() => upsell.openPaywall('aftermath', 'aftermath-stage', 'aftermath')}
         />
 

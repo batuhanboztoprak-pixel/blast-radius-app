@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AdBanner } from '../ads/AdBanner';
 import { useAds } from '../ads/ads';
+import { CompositionIcon } from '../components/CompositionIcon';
 import { Chip, PrimaryButton, StepHeader } from '../components/ui';
 import { t } from '../i18n/core';
 import {
@@ -49,7 +50,7 @@ const fromSlider = (v: number) => {
 const COMPOSITIONS: Composition[] = ['comet', 'rock', 'iron'];
 
 export default function SetAsteroid() {
-  const { params, updateParams, presetId, applyPreset, presetEpoch, result, location } = useSimulation();
+  const { params, updateParams, presetId, applyPreset, clearPreset, presetEpoch, result, location } = useSimulation();
   const { isPro } = usePremium();
   const upsell = useUpsell();
   const { onSimulation, dismissNudge } = useAds();
@@ -161,7 +162,13 @@ export default function SetAsteroid() {
         </View>
 
         <View style={styles.group}>
-          <Text style={styles.label}>{t('asteroid.composition')}</Text>
+          <View style={styles.compHead}>
+            <CompositionIcon kind={params.composition} size={52} />
+            <View style={styles.compText}>
+              <Text style={styles.label}>{t('asteroid.composition')}</Text>
+              <Text style={styles.note}>{t(`composition.desc.${params.composition}`)}</Text>
+            </View>
+          </View>
           <View style={styles.chips}>
             {COMPOSITIONS.map((c) => {
               const label = compositionLabel(c);
@@ -174,6 +181,7 @@ export default function SetAsteroid() {
                   locked={lock.locked}
                   badge={lock.badge}
                   a11yLabel={lock.a11y}
+                  icon={<CompositionIcon kind={c} size={20} />}
                   style={styles.flexChip}
                   onPress={() =>
                     lock.locked && c !== 'rock'
@@ -226,14 +234,20 @@ export default function SetAsteroid() {
                   badge={lock.badge}
                   a11yLabel={lock.a11y}
                   onPress={() =>
-                    lock.locked ? upsell.openPaywall('presets', 'preset-chip', p.id) : applyPreset(p)
+                    lock.locked
+                      ? upsell.openPaywall('presets', 'preset-chip', p.id)
+                      : presetId === p.id
+                        ? clearPreset() // tap the selected preset again to go back to your own asteroid
+                        : applyPreset(p)
                   }
                 />
               );
             })}
           </View>
           {presetId && (
-            <Text style={styles.note}>{t('asteroid.presetAngle', { angle: params.angleDeg })}</Text>
+            <Text style={styles.note}>
+              {t('asteroid.presetAngle', { angle: params.angleDeg })} {t('asteroid.presetClear')}
+            </Text>
           )}
         </View>
 
@@ -299,6 +313,8 @@ const styles = StyleSheet.create({
   flexChip: { flexGrow: 1, flexBasis: 0 },
   note: { fontSize: 12, color: colors.muted, fontFamily: fonts.body },
   unitsRow: { alignItems: 'center' },
+  compHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  compText: { flex: 1, gap: 2 },
   preview: { fontSize: 13, color: colors.muted, fontFamily: fonts.bodyMedium, textAlign: 'center' },
   footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16 },
 });

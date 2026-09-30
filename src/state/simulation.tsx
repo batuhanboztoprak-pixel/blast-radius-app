@@ -26,6 +26,8 @@ interface SimulationState {
   presetId: Preset['id'] | null;
   /** Load a historical asteroid; keeps the user's chosen location. */
   applyPreset: (preset: Preset) => void;
+  /** Leave the preset and go back to the custom asteroid the user had before it. */
+  clearPreset: () => void;
   /** Bumps whenever a preset is applied, so sliders can jump to its values. */
   presetEpoch: number;
   result: ImpactResult | null;
@@ -38,6 +40,8 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
   const [params, setParams] = useState<ImpactorParams>(DEFAULT_PARAMS);
   const [presetId, setPresetId] = useState<Preset['id'] | null>(null);
   const [presetEpoch, setPresetEpoch] = useState(0);
+  /** The user's own asteroid, kept while a preset is active so it can be restored. */
+  const [customParams, setCustomParams] = useState<ImpactorParams>(DEFAULT_PARAMS);
 
   const result = useMemo(() => (location ? simulateImpact(params) : null), [location, params]);
 
@@ -52,14 +56,21 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       },
       presetId,
       applyPreset: (preset) => {
+        if (!presetId) setCustomParams(params);
         setPresetId(preset.id);
         setParams(preset.params);
+        setPresetEpoch((n) => n + 1);
+      },
+      clearPreset: () => {
+        if (!presetId) return;
+        setPresetId(null);
+        setParams({ ...customParams, angleDeg: DEFAULT_PARAMS.angleDeg });
         setPresetEpoch((n) => n + 1);
       },
       presetEpoch,
       result,
     }),
-    [location, params, presetId, presetEpoch, result],
+    [location, params, presetId, presetEpoch, customParams, result],
   );
 
   return <SimulationContext.Provider value={value}>{children}</SimulationContext.Provider>;

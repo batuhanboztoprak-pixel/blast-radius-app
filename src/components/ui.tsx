@@ -117,6 +117,7 @@ export function Chip({
   locked,
   badge,
   a11yLabel,
+  icon,
   onPress,
   style,
 }: {
@@ -126,6 +127,8 @@ export function Chip({
   /** Small note under the label that replaces the lock, e.g. "Try once free". */
   badge?: string;
   a11yLabel?: string;
+  /** Picture before the label (composition icons). */
+  icon?: ReactNode;
   onPress: () => void;
   style?: StyleProp<ViewStyle>;
 }) {
@@ -144,6 +147,7 @@ export function Chip({
       ]}
     >
       {showLock && <LockIcon />}
+      {icon}
       <View style={badge ? styles.chipStack : undefined}>
         <Text
           style={[

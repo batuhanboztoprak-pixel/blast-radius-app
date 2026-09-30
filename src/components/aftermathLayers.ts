@@ -16,7 +16,18 @@ export interface StageCircle {
   stroke: string;
 }
 
+/**
+ * Animated particles drawn over the map for a stage. `radiusM` null means the
+ * whole map (global effects); `innerM` concentrates part of them near the centre.
+ */
+export interface StageEffect {
+  kind: 'fireball' | 'shock' | 'debris' | 'embers' | 'dust' | 'snow';
+  radiusM: number | null;
+  innerM?: number;
+}
+
 export interface StageLayers {
+  effect?: StageEffect;
   circles: StageCircle[];
   /** Hide the normal damage rings so the stage's own layers read clearly. */
   hideRings: boolean;
@@ -54,37 +65,53 @@ export function stageLayers(stage: Stage | undefined, r: ImpactResult): StageLay
         hideRings: true,
         tint: 'none',
         extentM: Math.max(fireball, crater, 2000) * 1.6,
+        effect: { kind: 'fireball', radiusM: Math.max(fireball, crater, 500) },
       };
     }
-    case 'blast':
-      return NONE;
+    case 'blast': {
+      const windows = r.rings.find((x) => x.kind === 'windows')?.radiusM;
+      return windows ? { ...NONE, effect: { kind: 'shock', radiusM: windows } } : NONE;
+    }
     case 'ejecta': {
       const deep = factDist(stage, 'af.ejecta.deep');
       const dust = factDist(stage, 'af.ejecta.dust');
       const circles: StageCircle[] = [];
       if (dust) circles.push({ key: 'dust', radiusM: dust, fill: 'rgba(170,128,86,0.22)', stroke: 'rgba(201,162,122,0.8)' });
       if (deep) circles.push({ key: 'deep', radiusM: deep, fill: 'rgba(120,82,50,0.6)', stroke: 'rgba(201,162,122,1)' });
-      return { circles: [...circles, ...craterCircle], hideRings: true, tint: global ? 'fire' : 'none', extentM: dust ?? deep ?? null };
+      return {
+        circles: [...circles, ...craterCircle],
+        hideRings: true,
+        tint: global ? 'fire' : 'none',
+        extentM: dust ?? deep ?? null,
+        effect: { kind: 'debris', radiusM: dust ?? deep ?? crater, innerM: deep },
+      };
     }
     case 'fires': {
       const burns = r.rings.find((x) => x.kind === 'thermal')?.radiusM;
       const circles: StageCircle[] = burns
         ? [{ key: 'fires', radiusM: burns, fill: 'rgba(255,90,40,0.42)', stroke: 'rgba(255,140,60,0.95)' }]
         : [];
-      return { circles, hideRings: true, tint: global ? 'fire' : 'none', extentM: burns ?? null };
+      return {
+        circles,
+        hideRings: true,
+        tint: global ? 'fire' : 'none',
+        extentM: burns ?? null,
+        effect: { kind: 'embers', radiusM: global ? null : (burns ?? null) },
+      };
     }
     case 'sky': {
-      if (global) return { circles: [], hideRings: true, tint: 'dark', extentM: null };
+      if (global) return { circles: [], hideRings: true, tint: 'dark', extentM: null, effect: { kind: 'dust', radiusM: null } };
       const windows = r.rings.find((x) => x.kind === 'windows')?.radiusM ?? crater * 20;
       return {
         circles: [{ key: 'dustcloud', radiusM: windows * 1.2, fill: 'rgba(40,40,46,0.55)', stroke: 'rgba(120,120,130,0.6)' }],
         hideRings: true,
         tint: 'none',
         extentM: windows * 1.3,
+        effect: { kind: 'dust', radiusM: windows * 1.2 },
       };
     }
     case 'climate':
-      return { circles: [], hideRings: true, tint: 'frost', extentM: null };
+      return { circles: [], hideRings: true, tint: 'frost', extentM: null, effect: { kind: 'snow', radiusM: null } };
     default:
       return NONE;
   }
