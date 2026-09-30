@@ -37,6 +37,8 @@ interface PremiumState {
   price: string | null;
   busy: boolean;
   error: string | null;
+  /** Time of the last purchase completed in this session (not restores); for attribution. */
+  purchasedAt: number | null;
   purchase: () => Promise<void>;
   restore: () => Promise<boolean>;
 }
@@ -52,7 +54,10 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
   const [price, setPrice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [purchasedAt, setPurchasedAt] = useState<number | null>(null);
   const connected = useRef<Promise<unknown> | null>(null);
+  /** True between tapping Buy and the store's answer, so launch-time replays aren't counted as new purchases. */
+  const buying = useRef(false);
 
   const setPro = useCallback((value: boolean) => {
     setIsPro(value);
@@ -87,6 +92,10 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
       // expo-iap reports it, so we unlock and finish right away.
       setPro(true);
       setBusy(false);
+      if (buying.current) {
+        buying.current = false;
+        setPurchasedAt(Date.now());
+      }
       try {
         await finishTransaction({ purchase, isConsumable: false });
       } catch {
@@ -95,6 +104,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     });
     const failed = purchaseErrorListener((e) => {
       setBusy(false);
+      buying.current = false;
       if (!isUserCancelledError(e)) setError(e.message || t('purchase.failed'));
     });
 
@@ -121,6 +131,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
   const purchase = useCallback(async () => {
     setError(null);
     setBusy(true);
+    buying.current = true;
     try {
       await connect();
       await requestPurchase({
@@ -130,6 +141,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
       // The outcome arrives via purchaseUpdatedListener / purchaseErrorListener.
     } catch (e) {
       setBusy(false);
+      buying.current = false;
       if (!isUserCancelledError(e)) {
         setError(e instanceof Error ? e.message : t('purchase.failed'));
       }
@@ -154,8 +166,8 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
   }, [connect, refreshEntitlement]);
 
   const value = useMemo(
-    () => ({ isPro, hydrated, price, busy, error, purchase, restore }),
-    [isPro, hydrated, price, busy, error, purchase, restore],
+    () => ({ isPro, hydrated, price, busy, error, purchasedAt, purchase, restore }),
+    [isPro, hydrated, price, busy, error, purchasedAt, purchase, restore],
   );
 
   return <PremiumContext.Provider value={value}>{children}</PremiumContext.Provider>;

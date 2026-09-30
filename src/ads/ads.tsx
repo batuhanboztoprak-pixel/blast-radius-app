@@ -19,6 +19,8 @@ import mobileAds, {
   AdsConsent,
   AdsConsentPrivacyOptionsRequirementStatus,
   InterstitialAd,
+  RewardedAd,
+  RewardedAdEventType,
   type RequestOptions,
 } from 'react-native-google-mobile-ads';
 
@@ -35,6 +37,17 @@ interface AdsState {
   requestOptions: RequestOptions;
   /** Call on every "Simulate". Resolves once any interstitial it showed has closed. */
   onSimulation: () => Promise<void>;
+  /** A rewarded ad is loaded and can be offered ("Watch a short ad to try it once"). */
+  rewardedReady: boolean;
+  /**
+   * Shows the rewarded ad. Resolves true only if the reward event fired before
+   * the ad closed; false if it was skipped, failed or wasn't loaded.
+   */
+  showRewarded: () => Promise<boolean>;
+  /** An interstitial just closed and the "Remove ads" card hasn't been shown this session. */
+  postAdNudge: boolean;
+  /** Hide the nudge; it won't come back this session. */
+  dismissNudge: () => void;
   /** Re-open the UMP privacy options form (required in the EEA/UK). */
   showPrivacyOptions: (() => Promise<void>) | null;
 }
@@ -137,6 +150,62 @@ export function AdsProvider({ children }: { children: ReactNode }) {
     };
   }, [adsEnabled, requestOptions]);
 
+  // --- Rewarded ---------------------------------------------------------------
+  const rewarded = useRef<RewardedAd | null>(null);
+  const [rewardedReady, setRewardedReady] = useState(false);
+
+  useEffect(() => {
+    if (!adsEnabled) return;
+    const ad = RewardedAd.createForAdRequest(AD_UNITS.rewarded, requestOptions);
+    rewarded.current = ad;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const unsubs = [
+      ad.addAdEventListener(RewardedAdEventType.LOADED, () => setRewardedReady(true)),
+      ad.addAdEventListener(AdEventType.CLOSED, () => {
+        setRewardedReady(false);
+        ad.load();
+      }),
+      ad.addAdEventListener(AdEventType.ERROR, () => {
+        // No fill or a network error: hide the option and try again later.
+        setRewardedReady(false);
+        clearTimeout(retry);
+        retry = setTimeout(() => ad.load(), 60_000);
+      }),
+    ];
+    ad.load();
+    return () => {
+      clearTimeout(retry);
+      unsubs.forEach((u) => u());
+      rewarded.current = null;
+      setRewardedReady(false);
+    };
+  }, [adsEnabled, requestOptions]);
+
+  const showRewarded = useCallback(async () => {
+    const ad = rewarded.current;
+    if (!adsEnabled || !ad || !rewardedReady) return false;
+    return new Promise<boolean>((resolve) => {
+      let earned = false;
+      const finish = () => {
+        offEarned();
+        offClosed();
+        offError();
+        resolve(earned);
+      };
+      const offEarned = ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
+        earned = true;
+      });
+      const offClosed = ad.addAdEventListener(AdEventType.CLOSED, finish);
+      const offError = ad.addAdEventListener(AdEventType.ERROR, finish);
+      ad.show().catch(finish);
+    });
+  }, [adsEnabled, rewardedReady]);
+
+  // --- Post-interstitial nudge -------------------------------------------------
+  const [postAdNudge, setPostAdNudge] = useState(false);
+  const nudgedThisSession = useRef(false);
+  const dismissNudge = useCallback(() => setPostAdNudge(false), []);
+
   const onSimulation = useCallback(async () => {
     simulations.current += 1;
     const ad = interstitial.current;
@@ -145,18 +214,23 @@ export function AdsProvider({ children }: { children: ReactNode }) {
       Date.now() - lastShownAt.current >= INTERSTITIAL_MIN_INTERVAL_MS;
     if (!adsEnabled || !ad || !loaded.current || !due) return;
 
-    await new Promise<void>((resolve) => {
-      const done = () => {
+    const closed = await new Promise<boolean>((resolve) => {
+      const done = (wasClosed: boolean) => {
         offClosed();
         offError();
-        resolve();
+        resolve(wasClosed);
       };
-      const offClosed = ad.addAdEventListener(AdEventType.CLOSED, done);
-      const offError = ad.addAdEventListener(AdEventType.ERROR, done);
+      const offClosed = ad.addAdEventListener(AdEventType.CLOSED, () => done(true));
+      const offError = ad.addAdEventListener(AdEventType.ERROR, () => done(false));
       lastShownAt.current = Date.now();
-      ad.show().catch(done);
+      ad.show().catch(() => done(false));
     });
-  }, [adsEnabled]);
+    // Offer "Remove ads for good" right after the user has sat through one, once a session.
+    if (closed && !nudgedThisSession.current && !isPro) {
+      nudgedThisSession.current = true;
+      setPostAdNudge(true);
+    }
+  }, [adsEnabled, isPro]);
 
   const showPrivacyOptions = useCallback(async () => {
     await AdsConsent.showPrivacyOptionsForm().catch(() => {});
@@ -167,9 +241,24 @@ export function AdsProvider({ children }: { children: ReactNode }) {
       adsEnabled,
       requestOptions,
       onSimulation,
+      rewardedReady: adsEnabled && rewardedReady,
+      showRewarded,
+      postAdNudge: postAdNudge && !isPro,
+      dismissNudge,
       showPrivacyOptions: privacyOptionsRequired ? showPrivacyOptions : null,
     }),
-    [adsEnabled, requestOptions, onSimulation, privacyOptionsRequired, showPrivacyOptions],
+    [
+      adsEnabled,
+      requestOptions,
+      onSimulation,
+      rewardedReady,
+      showRewarded,
+      postAdNudge,
+      isPro,
+      dismissNudge,
+      privacyOptionsRequired,
+      showPrivacyOptions,
+    ],
   );
 
   return <AdsContext.Provider value={value}>{children}</AdsContext.Provider>;

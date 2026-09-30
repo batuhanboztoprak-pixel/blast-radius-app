@@ -1,0 +1,197 @@
+import { useEffect, useMemo, useState } from 'react';
+import { AccessibilityInfo, Animated, StyleSheet, Text, View } from 'react-native';
+import Svg, {
+  Circle,
+  Defs,
+  G,
+  Line,
+  LinearGradient,
+  Path,
+  RadialGradient,
+  Rect,
+  Stop,
+} from 'react-native-svg';
+
+import { t } from '../i18n/core';
+import { simulateImpact } from '../physics/impact';
+import { PRESETS } from '../physics/presets';
+import { colors, fonts } from '../theme';
+import type { Feature } from '../upsell/entitlements';
+import { globePaths } from './globe';
+import { RING_STYLE } from './rings';
+
+const H = 150;
+
+/** Hero illustration for the paywall, one per feature. Decorative, so hidden from VoiceOver. */
+export function PaywallArt({ feature, width }: { feature: Feature; width: number }) {
+  return (
+    <View
+      style={[styles.wrap, { width, height: H }]}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      {feature === 'burns' && <BurnsArt width={width} />}
+      {feature === 'presets' && <PresetsArt />}
+      {feature === 'compositions' && <CompositionsArt width={width} />}
+      {feature === 'ads' && <AdsArt width={width} />}
+    </View>
+  );
+}
+
+/** Loops a 0→1→0 value unless Reduce Motion is on (then holds at 1). */
+function usePulse(duration: number) {
+  const [v] = useState(() => new Animated.Value(1));
+  useEffect(() => {
+    let loop: Animated.CompositeAnimation | null = null;
+    let cancelled = false;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .catch(() => false)
+      .then((reduce) => {
+        if (cancelled || reduce) return;
+        v.setValue(0);
+        loop = Animated.loop(
+          Animated.sequence([
+            Animated.timing(v, { toValue: 1, duration, useNativeDriver: true }),
+            Animated.timing(v, { toValue: 0, duration, useNativeDriver: true }),
+          ]),
+        );
+        loop.start();
+      });
+    return () => {
+      cancelled = true;
+      loop?.stop();
+    };
+  }, [v, duration]);
+  return v;
+}
+
+function BurnsArt({ width }: { width: number }) {
+  const pulse = usePulse(1400);
+  const cx = width / 2;
+  const cy = H / 2;
+  const glow = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.45, 1] });
+  return (
+    <>
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: glow }]}>
+        <Svg width={width} height={H}>
+          <Defs>
+            <RadialGradient id="heat" cx="50%" cy="50%" r="50%">
+              <Stop offset="0.55" stopColor={colors.magenta} stopOpacity="0" />
+              <Stop offset="0.82" stopColor={colors.magenta} stopOpacity="0.45" />
+              <Stop offset="1" stopColor={colors.magenta} stopOpacity="0" />
+            </RadialGradient>
+          </Defs>
+          <Circle cx={cx} cy={cy} r={70} fill="url(#heat)" />
+        </Svg>
+      </Animated.View>
+      <Svg width={width} height={H}>
+        <Defs>
+          <RadialGradient id="fire" cx="50%" cy="50%" r="50%">
+            <Stop offset="0" stopColor="#FFE3A3" />
+            <Stop offset="0.5" stopColor={colors.accent} />
+            <Stop offset="1" stopColor={colors.accent} stopOpacity="0" />
+          </RadialGradient>
+        </Defs>
+        <Circle cx={cx} cy={cy} r={58} fill="rgba(224,92,255,0.08)" stroke={colors.magenta} strokeWidth={2} />
+        <Circle cx={cx} cy={cy} r={38} fill={RING_STYLE.severe.fill} stroke={RING_STYLE.severe.stroke} strokeWidth={1.5} />
+        <Circle cx={cx} cy={cy} r={20} fill="url(#fire)" />
+      </Svg>
+    </>
+  );
+}
+
+function PresetsArt() {
+  const size = H - 6;
+  const paths = useMemo(() => {
+    const chicxulub = PRESETS.find((p) => p.id === 'chicxulub')!;
+    // Chicxulub, Yucatán; viewed from a little north-east so the rings wrap the globe.
+    return globePaths(21.4, -89.5, simulateImpact(chicxulub.params).rings, size, 28, -75);
+  }, [size]);
+  return (
+    <Svg width={size} height={size}>
+      <Defs>
+        <RadialGradient id="ocean" cx="40%" cy="35%" r="75%">
+          <Stop offset="0" stopColor="#1A2E52" />
+          <Stop offset="1" stopColor="#0A1326" />
+        </RadialGradient>
+      </Defs>
+      <Path d={paths.sphere} fill="url(#ocean)" />
+      <Path d={paths.land} fill="#34435F" />
+      {paths.rings.map((r) => (
+        <Path key={r.kind} d={r.d} fill={RING_STYLE[r.kind].fill} stroke={RING_STYLE[r.kind].stroke} strokeWidth={1.2} />
+      ))}
+      <Path d={paths.sphere} fill="none" stroke="rgba(74,158,255,0.35)" strokeWidth={1} />
+      {paths.impact && <Circle cx={paths.impact[0]} cy={paths.impact[1]} r={3} fill={colors.accent} />}
+    </Svg>
+  );
+}
+
+function CompositionsArt({ width }: { width: number }) {
+  const left = width * 0.3;
+  const right = width * 0.7;
+  const cy = H / 2 - 10;
+  return (
+    <>
+      <Svg width={width} height={H}>
+        <Defs>
+          <RadialGradient id="iron" cx="35%" cy="30%" r="75%">
+            <Stop offset="0" stopColor="#D9DDE6" />
+            <Stop offset="0.45" stopColor="#7C8496" />
+            <Stop offset="1" stopColor="#2B303C" />
+          </RadialGradient>
+          <RadialGradient id="ice" cx="35%" cy="30%" r="75%">
+            <Stop offset="0" stopColor="#F2FBFF" />
+            <Stop offset="0.5" stopColor="#8FD3FF" />
+            <Stop offset="1" stopColor="#2A5C8A" />
+          </RadialGradient>
+          <LinearGradient id="tail" x1="0" y1="0" x2="1" y2="0">
+            <Stop offset="0" stopColor="#8FD3FF" stopOpacity="0" />
+            <Stop offset="1" stopColor="#8FD3FF" stopOpacity="0.6" />
+          </LinearGradient>
+        </Defs>
+        {/* Iron: small and dense, pocked surface. */}
+        <Circle cx={left} cy={cy} r={30} fill="url(#iron)" />
+        <Circle cx={left - 9} cy={cy + 8} r={4} fill="rgba(0,0,0,0.25)" />
+        <Circle cx={left + 11} cy={cy - 4} r={3} fill="rgba(0,0,0,0.25)" />
+        <Circle cx={left + 3} cy={cy + 15} r={2.5} fill="rgba(0,0,0,0.25)" />
+        {/* Comet: bigger, fluffy, with a tail streaming away. */}
+        <Path d={`M ${right - 95} ${cy - 14} L ${right} ${cy - 30} L ${right} ${cy + 30} L ${right - 95} ${cy + 14} Z`} fill="url(#tail)" />
+        <Circle cx={right} cy={cy} r={34} fill="url(#ice)" opacity={0.95} />
+        <Circle cx={right} cy={cy} r={40} fill="none" stroke="rgba(143,211,255,0.35)" strokeWidth={4} />
+      </Svg>
+      <View style={[styles.labels, { top: cy + 46 }]}>
+        <Text style={[styles.label, { left: left - 60 }]}>{t('composition.iron')}</Text>
+        <Text style={[styles.label, { left: right - 60 }]}>{t('composition.comet')}</Text>
+      </View>
+    </>
+  );
+}
+
+function AdsArt({ width }: { width: number }) {
+  const w = 86;
+  const x = width / 2 - w / 2;
+  return (
+    <Svg width={width} height={H}>
+      <Rect x={x} y={8} width={w} height={H - 16} rx={14} fill={colors.surface} stroke={colors.border} strokeWidth={1.5} />
+      <Rect x={x + 10} y={24} width={w - 20} height={40} rx={6} fill="rgba(74,158,255,0.15)" />
+      <Circle cx={width / 2} cy={44} r={9} fill={RING_STYLE.severe.fill} stroke={RING_STYLE.severe.stroke} />
+      <Rect x={x + 10} y={H - 44} width={w - 20} height={20} rx={4} fill="rgba(255,196,74,0.25)" />
+      <G stroke={colors.accent} strokeWidth={3} strokeLinecap="round">
+        <Line x1={x + 6} y1={H - 52} x2={x + w - 6} y2={H - 16} />
+      </G>
+    </Svg>
+  );
+}
+
+const styles = StyleSheet.create({
+  wrap: { alignSelf: 'center', alignItems: 'center', justifyContent: 'center' },
+  labels: { position: 'absolute', left: 0, right: 0 },
+  label: {
+    position: 'absolute',
+    width: 120,
+    textAlign: 'center',
+    fontSize: 12,
+    color: colors.muted,
+    fontFamily: fonts.bodySemi,
+  },
+});

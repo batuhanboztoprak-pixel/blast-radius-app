@@ -1,7 +1,7 @@
 import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { InteractionManager, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -25,6 +25,8 @@ import { usePremium } from '../state/premium';
 import { useSimulation } from '../state/simulation';
 import { useUnits } from '../state/units';
 import { useWorld } from '../state/world';
+import { freeFallback, planSimulation, type LockedItem } from '../upsell/entitlements';
+import { useUpsell } from '../upsell/upsell';
 import { colors, fonts } from '../theme';
 
 const MIN_DIAMETER = 10;
@@ -47,14 +49,38 @@ const fromSlider = (v: number) => {
 const COMPOSITIONS: Composition[] = ['comet', 'rock', 'iron'];
 
 export default function SetAsteroid() {
-  const { params, updateParams, presetId, applyPreset, result, location } = useSimulation();
+  const { params, updateParams, presetId, applyPreset, presetEpoch, result, location } = useSimulation();
   const { isPro } = usePremium();
+  const upsell = useUpsell();
   const { onSimulation } = useAds();
   const { recordStrike } = useWorld();
   const { units, setUnits } = useUnits();
   const [simulating, setSimulating] = useState(false);
-  // Slider thumbs stay uncontrolled while dragging; bump the key to move them programmatically.
-  const [sliderKey, setSliderKey] = useState(0);
+  // Slider thumbs stay uncontrolled while dragging; applying a preset remounts them (presetEpoch).
+  const sliderKey = presetEpoch;
+
+  // When the user comes back after a strike that spent a free try or an ad unlock,
+  // put a now-locked selection back on free ground so Simulate never hits a paywall
+  // for something they didn't just pick. Runs on focus only, never mid-simulation.
+  const latest = useRef({ state: upsell.state, params, presetId, isPro, updateParams });
+  useEffect(() => {
+    latest.current = { state: upsell.state, params, presetId, isPro, updateParams };
+  });
+  useFocusEffect(
+    useCallback(() => {
+      const l = latest.current;
+      const patch = freeFallback(l.state, { composition: l.params.composition, presetId: l.presetId }, l.isPro);
+      if (patch) l.updateParams(patch.composition ? { composition: patch.composition } : {});
+    }, []),
+  );
+
+  /** Badge and a11y label for a Pro item, based on how it can be used right now. */
+  const lockInfo = (item: LockedItem, label: string) => {
+    const access = upsell.access(item);
+    if (access === 'ticket') return { locked: false, badge: t('lock.oneTry'), a11y: t('lock.oneTryA11y', { label }) };
+    if (access === 'freeTry') return { locked: false, badge: t('lock.tryFree'), a11y: t('lock.tryFreeA11y', { label }) };
+    return { locked: access === 'locked', badge: undefined, a11y: undefined };
+  };
 
   // Decode the population grid while the user is still choosing, not when they tap Simulate.
   useEffect(() => {
@@ -67,6 +93,12 @@ export default function SetAsteroid() {
   const energy = result ? formatEnergyMt(result.entryEnergyMt) : null;
 
   async function simulate() {
+    const plan = planSimulation(upsell.state, { composition: params.composition, presetId }, isPro);
+    if (!plan.ok) {
+      upsell.openPaywall(plan.feature, 'locked-simulate', plan.item);
+      return;
+    }
+    upsell.beginRun(plan);
     setSimulating(true);
     if (result && location) {
       recordStrike((survivors) =>
@@ -118,16 +150,21 @@ export default function SetAsteroid() {
           <Text style={styles.label}>{t('asteroid.composition')}</Text>
           <View style={styles.chips}>
             {COMPOSITIONS.map((c) => {
-              const locked = !isPro && c !== 'rock';
+              const label = compositionLabel(c);
+              const lock = c === 'rock' ? { locked: false, badge: undefined, a11y: undefined } : lockInfo(c, label);
               return (
                 <Chip
                   key={c}
-                  label={compositionLabel(c)}
+                  label={label}
                   selected={params.composition === c}
-                  locked={locked}
+                  locked={lock.locked}
+                  badge={lock.badge}
+                  a11yLabel={lock.a11y}
                   style={styles.flexChip}
                   onPress={() =>
-                    locked ? router.push('/paywall') : updateParams({ composition: c })
+                    lock.locked && c !== 'rock'
+                      ? upsell.openPaywall('compositions', 'composition-chip', c)
+                      : updateParams({ composition: c })
                   }
                 />
               );
@@ -163,19 +200,23 @@ export default function SetAsteroid() {
         <View style={styles.group}>
           <Text style={styles.label}>{t('asteroid.presets')}</Text>
           <View style={styles.chips}>
-            {PRESETS.map((p) => (
-              <Chip
-                key={p.id}
-                label={presetText(p.id).name}
-                selected={presetId === p.id}
-                locked={!isPro}
-                onPress={() => {
-                  if (!isPro) return router.push('/paywall');
-                  applyPreset(p);
-                  setSliderKey((k) => k + 1);
-                }}
-              />
-            ))}
+            {PRESETS.map((p) => {
+              const label = presetText(p.id).name;
+              const lock = lockInfo(p.id, label);
+              return (
+                <Chip
+                  key={p.id}
+                  label={label}
+                  selected={presetId === p.id}
+                  locked={lock.locked}
+                  badge={lock.badge}
+                  a11yLabel={lock.a11y}
+                  onPress={() =>
+                    lock.locked ? upsell.openPaywall('presets', 'preset-chip', p.id) : applyPreset(p)
+                  }
+                />
+              );
+            })}
           </View>
           {presetId && (
             <Text style={styles.note}>{t('asteroid.presetAngle', { angle: params.angleDeg })}</Text>

@@ -26,6 +26,8 @@ interface SimulationState {
   presetId: Preset['id'] | null;
   /** Load a historical asteroid; keeps the user's chosen location. */
   applyPreset: (preset: Preset) => void;
+  /** Bumps whenever a preset is applied, so sliders can jump to its values. */
+  presetEpoch: number;
   result: ImpactResult | null;
 }
 
@@ -35,6 +37,7 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
   const [location, setLocation] = useState<ImpactLocation | null>(null);
   const [params, setParams] = useState<ImpactorParams>(DEFAULT_PARAMS);
   const [presetId, setPresetId] = useState<Preset['id'] | null>(null);
+  const [presetEpoch, setPresetEpoch] = useState(0);
 
   const result = useMemo(() => (location ? simulateImpact(params) : null), [location, params]);
 
@@ -51,10 +54,12 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       applyPreset: (preset) => {
         setPresetId(preset.id);
         setParams(preset.params);
+        setPresetEpoch((n) => n + 1);
       },
+      presetEpoch,
       result,
     }),
-    [location, params, presetId, result],
+    [location, params, presetId, presetEpoch, result],
   );
 
   return <SimulationContext.Provider value={value}>{children}</SimulationContext.Provider>;

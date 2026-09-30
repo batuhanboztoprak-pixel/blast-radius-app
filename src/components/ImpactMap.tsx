@@ -4,13 +4,18 @@ import {
   AccessibilityInfo,
   Animated,
   StyleSheet,
+  Text,
+  View,
   type LayoutChangeEvent,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
 import MapView, { Circle, Marker } from 'react-native-maps';
 
+import { t } from '../i18n/core';
 import type { Ring } from '../physics/impact';
+import { colors, fonts } from '../theme';
+import { LockIcon } from './icons';
 import type { ImpactLocation } from '../state/simulation';
 import { regionForRadius } from '../lib/geo';
 import { FALLBACK_FRAME_RADIUS_M, RING_STYLE } from './rings';
@@ -25,6 +30,12 @@ interface Props {
   strikeToken?: number;
   /** Called once the rings are on the map after a strike (animated or not). */
   onStrikeEnd?: () => void;
+  /**
+   * A Pro ring the user can't use yet (free users' burns ring): drawn faint and
+   * dashed with a "Pro" tag, after the strike animation, never in it.
+   */
+  lockedRing?: Ring | null;
+  onLockedPress?: () => void;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -34,7 +45,7 @@ type Strike = { center: { x: number; y: number }; rings: StrikeRing[]; token: nu
 
 /** Apple Maps (MapKit) on iOS with the damage rings drawn as geodesic circles. */
 export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
-  { location, rings, focusRadiusM = null, strikeToken = 0, onStrikeEnd, style },
+  { location, rings, focusRadiusM = null, strikeToken = 0, onStrikeEnd, lockedRing, onLockedPress, style },
   ref,
 ) {
   const map = useRef<MapView>(null);
@@ -116,7 +127,6 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
     if (!ringsHidden) return;
     const t = setTimeout(reveal, 4_500);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ringsHidden]);
 
   const onImpact = () => {
@@ -165,6 +175,33 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
               />
             );
           })}
+        {!ringsHidden && lockedRing && (
+          <>
+            <Circle
+              center={location}
+              radius={lockedRing.radiusM}
+              fillColor="rgba(224,92,255,0.04)"
+              strokeColor="rgba(224,92,255,0.45)"
+              strokeWidth={1.5}
+              lineDashPattern={[6, 6]}
+            />
+            <Marker
+              // Tag sits on the ring's northern edge.
+              coordinate={{
+                latitude: Math.min(location.latitude + ((lockedRing.radiusM / EARTH_RADIUS_M) * 180) / Math.PI, 85),
+                longitude: location.longitude,
+              }}
+              anchor={{ x: 0.5, y: 0.5 }}
+              onPress={onLockedPress}
+              accessibilityLabel={t('result.burnsTagA11y')}
+            >
+              <View style={styles.tag}>
+                <LockIcon size={10} color={colors.text} />
+                <Text style={styles.tagText}>{t('lock.pro')}</Text>
+              </View>
+            </Marker>
+          </>
+        )}
         <Marker coordinate={location} pinColor="#FF6B4A" />
       </MapView>
       {strike && (
@@ -184,4 +221,16 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
 
 const styles = StyleSheet.create({
   map: { flex: 1 },
+  tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: 'rgba(11,14,23,0.9)',
+    borderColor: 'rgba(224,92,255,0.7)',
+    borderWidth: 1,
+  },
+  tagText: { fontSize: 10, color: colors.text, fontFamily: fonts.bodySemi },
 });

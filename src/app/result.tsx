@@ -1,16 +1,18 @@
 import { Redirect, router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AdBanner } from '../ads/AdBanner';
+import { useAds } from '../ads/ads';
 import { GlobeView } from '../components/GlobeView';
 import { GLOBE_AVAILABLE_ABOVE_M, GLOBE_DEFAULT_ABOVE_M } from '../components/globe';
 import { ImpactMap } from '../components/ImpactMap';
 import { RingLegend } from '../components/RingLegend';
 import { BackIcon, LockIcon, ShareIcon } from '../components/icons';
 import { visibleRings } from '../components/rings';
-import { IconButton, PrimaryButton, SecondaryButton, StatCard } from '../components/ui';
+import { IconButton, LockedStatCard, PrimaryButton, SecondaryButton, StatCard } from '../components/ui';
+import { AdNudgeCard, FreeTryCard } from '../components/UpsellCards';
 import { PopulationCard } from '../components/PopulationCard';
 import { t } from '../i18n/core';
 import {
@@ -28,13 +30,18 @@ import { usePremium } from '../state/premium';
 import { useSimulation } from '../state/simulation';
 import { useUnits } from '../state/units';
 import { useWorld } from '../state/world';
+import { hasTicket } from '../upsell/entitlements';
+import { useUpsell } from '../upsell/upsell';
 import { colors, fonts, radius } from '../theme';
 
 const ringRadius = (rings: Ring[], kind: Ring['kind']) => rings.find((r) => r.kind === kind);
 
 export default function Result() {
   const { result, location, presetId } = useSimulation();
-  const { isPro } = usePremium();
+  const { isPro, price } = usePremium();
+  const { postAdNudge, dismissNudge } = useAds();
+  const upsell = useUpsell();
+  const { run, unlockBurnsForRun } = upsell;
   const { width, height } = useWindowDimensions();
   const world = useWorld();
   const { units } = useUnits();
@@ -44,9 +51,19 @@ export default function Result() {
   const [playedToken, setPlayedToken] = useState(0);
   const [view, setView] = useState<'map' | 'globe'>('map');
 
+  // A burns unlock earned from a rewarded ad applies to the strike on screen.
+  const burnsTicket = hasTicket(upsell.state, 'burns');
+  useEffect(() => {
+    if (!isPro && burnsTicket) unlockBurnsForRun();
+  }, [isPro, burnsTicket, unlockBurnsForRun]);
+
+  // The "Remove ads" nudge lives only as long as this screen.
+  useEffect(() => dismissNudge, [dismissNudge]);
+
   if (!result || !location) return <Redirect href="/" />;
 
-  const rings = visibleRings(result.rings, isPro);
+  const burnsUnlocked = isPro || !!run?.burns;
+  const rings = visibleRings(result.rings, burnsUnlocked);
   const energy = formatEnergyMt(result.effectiveEnergyMt);
   const hiroshima =
     result.hiroshimaMultiple < 1
@@ -57,7 +74,10 @@ export default function Result() {
   const windows = ringRadius(result.rings, 'windows');
   const thermal = ringRadius(result.rings, 'thermal');
   const preset = presetId ? presetText(presetId) : null;
-  const openPaywall = () => router.push('/paywall');
+  const openBurns = (source: 'burns-card' | 'burns-tag' | 'burns-legend') =>
+    upsell.openPaywall('burns', source, 'burns');
+  const lockedThermal = !burnsUnlocked && thermal ? thermal : null;
+  const freeTry = !isPro && run?.freeTry && run.freeTry === presetId ? run.freeTry : null;
   const largest = result.rings[0]?.radiusM ?? 0;
   const globeAvailable = largest >= GLOBE_AVAILABLE_ABOVE_M;
   const mapHeight = Math.max(260, height * 0.36);
@@ -105,12 +125,14 @@ export default function Result() {
                   setPlayedToken(strikeToken);
                   if (largest >= GLOBE_DEFAULT_ABOVE_M) setView('globe');
                 }}
+                lockedRing={lockedThermal}
+                onLockedPress={() => openBurns('burns-tag')}
               />
               <RingLegend
                 rings={rings}
                 selected={focus}
                 onSelect={setFocus}
-                onLockedThermal={!isPro && thermal ? openPaywall : undefined}
+                onLockedThermal={lockedThermal ? () => openBurns('burns-legend') : undefined}
               />
             </>
           ) : (
@@ -197,20 +219,30 @@ export default function Result() {
           onReset={world.reset}
         />
 
-        {isPro ? (
-          <View style={styles.grid}>
+        <View style={styles.grid}>
+          {burnsUnlocked ? (
             <StatCard
               label={t('result.burns')}
               value={distanceText(thermal)}
               hint={thermal ? ringHint(thermal, t('result.burnsHint')) : t('result.burnsNone')}
             />
-            <StatCard label={t('result.recurrence')} value={formatYears(result.recurrenceYears)} />
-          </View>
-        ) : (
-          <SecondaryButton
-            label={t('result.unlockBurns')}
-            onPress={openPaywall}
-            style={styles.unlock}
+          ) : (
+            lockedThermal && (
+              <LockedStatCard
+                label={t('result.burns')}
+                hint={t('result.burnsLockedHint')}
+                a11yLabel={t('result.burnsLockedA11y')}
+                onPress={() => openBurns('burns-card')}
+              />
+            )
+          )}
+          <StatCard label={t('result.recurrence')} value={formatYears(result.recurrenceYears)} />
+        </View>
+
+        {freeTry && (
+          <FreeTryCard
+            presetName={presetText(freeTry).name}
+            onUnlock={() => upsell.openPaywall('presets', 'free-try-card', freeTry)}
           />
         )}
 
@@ -232,6 +264,16 @@ export default function Result() {
         <Text style={styles.footnote}>{t('result.footnote', { angle: result.params.angleDeg })}</Text>
       </ScrollView>
 
+      {postAdNudge && price && (
+        <AdNudgeCard
+          price={price}
+          onPress={() => {
+            dismissNudge();
+            upsell.openPaywall('ads', 'ad-nudge');
+          }}
+          onDismiss={dismissNudge}
+        />
+      )}
       <View style={styles.footer}>
         <SecondaryButton label={t('result.tryAgain')} onPress={() => router.back()} style={styles.flex} />
         <PrimaryButton label={t('common.share')} onPress={() => router.push('/share')} style={styles.flex} />
@@ -289,7 +331,6 @@ const styles = StyleSheet.create({
   energy: { fontSize: 34, color: colors.text, fontFamily: fonts.display, lineHeight: 40 },
   multiple: { fontSize: 13, color: colors.accent, fontFamily: fonts.bodySemi, marginTop: 2 },
   grid: { flexDirection: 'row', gap: 10 },
-  unlock: { minHeight: 48 },
   noteCard: {
     backgroundColor: colors.surface,
     borderColor: colors.border,

@@ -110,20 +110,26 @@ export function Chip({
   label,
   selected,
   locked,
+  badge,
+  a11yLabel,
   onPress,
   style,
 }: {
   label: string;
   selected?: boolean;
   locked?: boolean;
+  /** Small note under the label that replaces the lock, e.g. "Try once free". */
+  badge?: string;
+  a11yLabel?: string;
   onPress: () => void;
   style?: StyleProp<ViewStyle>;
 }) {
+  const showLock = locked && !badge;
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      accessibilityLabel={locked ? t('chip.requiresPro', { label }) : label}
+      accessibilityLabel={a11yLabel ?? (showLock ? t('chip.requiresPro', { label }) : label)}
       onPress={onPress}
       style={({ pressed }) => [
         styles.chip,
@@ -132,16 +138,19 @@ export function Chip({
         style,
       ]}
     >
-      {locked && <LockIcon />}
-      <Text
-        style={[
-          styles.chipLabel,
-          selected && styles.chipLabelSelected,
-          locked && { color: colors.dim },
-        ]}
-      >
-        {label}
-      </Text>
+      {showLock && <LockIcon />}
+      <View style={badge ? styles.chipStack : undefined}>
+        <Text
+          style={[
+            styles.chipLabel,
+            selected && styles.chipLabelSelected,
+            showLock && { color: colors.dim },
+          ]}
+        >
+          {label}
+        </Text>
+        {badge ? <Text style={styles.chipBadge}>{badge}</Text> : null}
+      </View>
     </Pressable>
   );
 }
@@ -155,6 +164,39 @@ export function StatCard({ label, value, hint }: { label: string; value: string;
       </Text>
       {hint ? <Text style={styles.statHint}>{hint}</Text> : null}
     </View>
+  );
+}
+
+/**
+ * A stat the user can't see yet: the value is masked (never rendered, so it
+ * can't be read or screenshotted) and the card opens the paywall.
+ */
+export function LockedStatCard({
+  label,
+  hint,
+  a11yLabel,
+  onPress,
+}: {
+  label: string;
+  hint: string;
+  a11yLabel: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={a11yLabel}
+      onPress={onPress}
+      style={({ pressed }) => [styles.stat, styles.lockedStat, pressed && styles.pressed]}
+    >
+      <Text style={styles.statLabel}>{label}</Text>
+      <View style={styles.masked}>
+        <View style={[styles.maskBar, { width: 34 }]} />
+        <View style={[styles.maskBar, { width: 18, opacity: 0.6 }]} />
+        <LockIcon size={14} color={colors.magenta} />
+      </View>
+      <Text style={[styles.statHint, { color: colors.magenta }]}>{hint}</Text>
+    </Pressable>
   );
 }
 
@@ -201,6 +243,8 @@ const styles = StyleSheet.create({
   },
   chipSelected: { backgroundColor: 'rgba(255,107,74,0.12)', borderColor: colors.accent, borderWidth: 1.5 },
   chipLabel: { fontSize: 13, color: colors.muted, fontFamily: fonts.bodySemi },
+  chipStack: { alignItems: 'center', paddingVertical: 4 },
+  chipBadge: { fontSize: 10, color: colors.yellow, fontFamily: fonts.bodySemi, marginTop: 1 },
   chipLabelSelected: { color: colors.accent },
   stat: {
     flex: 1,
@@ -214,4 +258,7 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 11, letterSpacing: 0.5, color: colors.muted, fontFamily: fonts.bodySemi },
   statValue: { fontSize: 20, color: colors.text, fontFamily: fonts.display },
   statHint: { fontSize: 11, color: colors.dim, fontFamily: fonts.body },
+  lockedStat: { borderColor: 'rgba(224,92,255,0.35)', borderStyle: 'dashed' },
+  masked: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 26 },
+  maskBar: { height: 14, borderRadius: 7, backgroundColor: 'rgba(224,92,255,0.28)' },
 });

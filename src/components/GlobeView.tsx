@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { PanResponder, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Circle, Defs, Path, RadialGradient, Stop } from 'react-native-svg';
 
@@ -25,42 +25,45 @@ const DRAG_DEG_PER_PX = 0.35;
  */
 export function GlobeView({ latitude, longitude, rings, size, style }: Props) {
   const [view, setView] = useState({ lat: latitude, lon: longitude });
-  const start = useRef(view);
-  const frame = useRef<number | null>(null);
-  const pending = useRef(view);
 
-  const pan = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        // Keep the gesture away from the parent ScrollView while spinning.
-        onPanResponderTerminationRequest: () => false,
-        onPanResponderGrant: () => {
-          start.current = pending.current;
-        },
-        onPanResponderMove: (_, g) => {
-          pending.current = {
-            lat: Math.max(-89, Math.min(89, start.current.lat + g.dy * DRAG_DEG_PER_PX)),
-            lon: start.current.lon - g.dx * DRAG_DEG_PER_PX,
-          };
-          // At most one re-projection per frame.
-          if (frame.current === null) {
-            frame.current = requestAnimationFrame(() => {
-              frame.current = null;
-              setView(pending.current);
-            });
-          }
-        },
-      }),
-    [],
-  );
+  // Gesture bookkeeping lives in a plain object created once, not in refs, so
+  // nothing mutable is read during render.
+  const [gesture] = useState(() => {
+    const g = {
+      start: { lat: latitude, lon: longitude },
+      pending: { lat: latitude, lon: longitude },
+      frame: null as number | null,
+    };
+    const pan = PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      // Keep the gesture away from the parent ScrollView while spinning.
+      onPanResponderTerminationRequest: () => false,
+      onPanResponderGrant: () => {
+        g.start = g.pending;
+      },
+      onPanResponderMove: (_, d) => {
+        g.pending = {
+          lat: Math.max(-89, Math.min(89, g.start.lat + d.dy * DRAG_DEG_PER_PX)),
+          lon: g.start.lon - d.dx * DRAG_DEG_PER_PX,
+        };
+        // At most one re-projection per frame.
+        if (g.frame === null) {
+          g.frame = requestAnimationFrame(() => {
+            g.frame = null;
+            setView(g.pending);
+          });
+        }
+      },
+    });
+    return { g, pan };
+  });
 
   useEffect(
     () => () => {
-      if (frame.current !== null) cancelAnimationFrame(frame.current);
+      if (gesture.g.frame !== null) cancelAnimationFrame(gesture.g.frame);
     },
-    [],
+    [gesture],
   );
 
   const paths = useMemo(
@@ -69,7 +72,7 @@ export function GlobeView({ latitude, longitude, rings, size, style }: Props) {
   );
 
   return (
-    <View style={[styles.wrap, { width: size, height: size }, style]} {...pan.panHandlers}>
+    <View style={[styles.wrap, { width: size, height: size }, style]} {...gesture.pan.panHandlers}>
       <Svg width={size} height={size}>
         <Defs>
           <RadialGradient id="ocean" cx="40%" cy="35%" r="75%">

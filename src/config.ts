@@ -13,10 +13,12 @@ const PROD_AD_UNITS = {
   ios: {
     banner: 'ca-app-pub-XXXXXXXXXXXXXXXX/BBBBBBBBBB',
     interstitial: 'ca-app-pub-XXXXXXXXXXXXXXXX/IIIIIIIIII',
+    rewarded: 'ca-app-pub-XXXXXXXXXXXXXXXX/RRRRRRRRRR',
   },
   android: {
     banner: 'ca-app-pub-XXXXXXXXXXXXXXXX/BBBBBBBBBB',
     interstitial: 'ca-app-pub-XXXXXXXXXXXXXXXX/IIIIIIIIII',
+    rewarded: 'ca-app-pub-XXXXXXXXXXXXXXXX/RRRRRRRRRR',
   },
 };
 
@@ -25,6 +27,8 @@ const platformUnits = Platform.OS === 'android' ? PROD_AD_UNITS.android : PROD_A
 export const AD_UNITS = {
   banner: __DEV__ ? TestIds.ADAPTIVE_BANNER : platformUnits.banner,
   interstitial: __DEV__ ? TestIds.INTERSTITIAL : platformUnits.interstitial,
+  /** "Watch a short ad to try it once": unlocks one Pro item for one strike. */
+  rewarded: __DEV__ ? TestIds.REWARDED : platformUnits.rewarded,
 };
 
 /** Show an interstitial on every Nth simulation (never the first). */

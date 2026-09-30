@@ -13,10 +13,12 @@ import { usePremium } from '../state/premium';
 import { useSimulation } from '../state/simulation';
 import { useUnits } from '../state/units';
 import { colors, fonts } from '../theme';
+import { useUpsell } from '../upsell/upsell';
 
 export default function Share() {
   const { result, location } = useSimulation();
   const { isPro } = usePremium();
+  const { run } = useUpsell();
   const { units } = useUnits();
   const { width } = useWindowDimensions();
   const card = useRef<View>(null);
@@ -59,7 +61,8 @@ export default function Share() {
             width={cardWidth}
             result={result}
             location={location}
-            rings={visibleRings(result.rings, isPro)}
+            // Locked rings never go on the card; an ad-unlocked burns ring does.
+            rings={visibleRings(result.rings, isPro || !!run?.burns)}
             units={units}
             onReady={() => setReady(true)}
           />

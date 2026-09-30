@@ -12,6 +12,7 @@ import { PremiumProvider } from '../state/premium';
 import { SimulationProvider } from '../state/simulation';
 import { UnitsProvider } from '../state/units';
 import { WorldProvider } from '../state/world';
+import { UpsellProvider } from '../upsell/upsell';
 import { colors } from '../theme';
 
 // Pick the language before anything renders; iOS relaunches the app if it changes.
@@ -35,19 +36,22 @@ export default function RootLayout() {
           <UnitsProvider>
             <SimulationProvider>
               <WorldProvider>
-                <StatusBar style="light" />
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    contentStyle: { backgroundColor: colors.bg },
-                  }}
-                >
-                  <Stack.Screen name="index" />
-                  <Stack.Screen name="asteroid" />
-                  <Stack.Screen name="result" />
-                  <Stack.Screen name="share" />
-                  <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
-                </Stack>
+                <UpsellProvider>
+                  <StatusBar style="light" />
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      contentStyle: { backgroundColor: colors.bg },
+                    }}
+                  >
+                    <Stack.Screen name="index" />
+                    <Stack.Screen name="asteroid" />
+                    <Stack.Screen name="result" />
+                    <Stack.Screen name="share" />
+                    <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
+                    <Stack.Screen name="upgrade-stats" options={{ presentation: 'modal' }} />
+                  </Stack>
+                </UpsellProvider>
               </WorldProvider>
             </SimulationProvider>
           </UnitsProvider>

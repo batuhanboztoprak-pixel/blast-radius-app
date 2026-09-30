@@ -21,9 +21,12 @@ These steps happen outside the codebase. Placeholders in code are marked in
 - [ ] Create an AdMob account and **add the iOS app**. Link it to the App Store listing once it's live.
 - [ ] Copy the **App ID** (`ca-app-pub-…~…`) into `app.json` → `plugins` → `react-native-google-mobile-ads.iosAppId`.
       The committed value is Google's public **test** App ID.
-- [ ] Create two ad units and paste their IDs into `PROD_AD_UNITS` in `src/config.ts`:
+- [ ] Create three ad units and paste their IDs into `PROD_AD_UNITS` in `src/config.ts`:
   - Banner (adaptive)
   - Interstitial
+  - **Rewarded** (for "Watch a short ad to try it once"). Reward amount and item don't matter; the app
+    grants one strike with the chosen Pro item whenever the reward event fires. Leave
+    server-side verification (SSV) off; there's no backend to receive it.
 - [ ] **Privacy & messaging** → create a **GDPR consent message** for EEA/UK users. The app shows it through UMP (`AdsConsent.gatherConsent`).
       Optionally add an **IDFA explainer** message, which UMP shows before the ATT prompt.
 - [ ] Check the `skAdNetworkItems` list in `app.json` against Google's current list
@@ -85,3 +88,15 @@ npx eas-cli@latest submit --platform ios
 - [ ] Buying Pro removes ads immediately and unlocks iron/comet, the thermal ring and presets.
 - [ ] Deleting and reinstalling, then tapping **Restore purchase**, brings Pro back.
 - [ ] With ATT denied, ads still load (non-personalized).
+
+Upgrade prompts (free user unless noted):
+
+- [ ] **Locked burns ring:** after a 450 m impact, the burns ring appears faint and dashed with a "Pro" tag *after* the strike animation, not during it. The "3RD-DEGREE BURNS" card shows a masked value with a lock. Tapping the tag, the card, or the legend's locked row each opens the paywall with the glowing-ring art at the top. The share card has no burns ring. With Pro, the ring is solid and the card shows the value.
+- [ ] **Free tries:** fresh install → all three presets say "Try once free". Striking Chicxulub works and the result shows "That was your free Chicxulub…" with Unlock Pro. Back on the asteroid screen, Chicxulub is deselected and locked, and tapping it opens the paywall on famous impacts. The other two presets still say "Try once free". This survives an app restart.
+- [ ] **Rewarded try:** tap locked Iron → paywall → "Watch a short ad to try it once" → watch to the end → back on the asteroid screen Iron is selected with "1 try unlocked". Simulate uses iron; returning switches back to Rock and Iron is locked again. Closing the ad early unlocks nothing and shows a note. Repeat for Comet, a used preset, and the burns ring from the result screen (the ring appears on that result).
+- [ ] With airplane mode on (no ad loaded) or as Pro, the "Watch a short ad" button isn't shown.
+- [ ] **Remove-ads nudge:** on the 3rd simulation, after closing the interstitial, the result screen slides up "Remove ads for good · $3.99" (your store price). ✕ dismisses it; it doesn't return this session even after the next interstitial; tapping it opens the paywall on "No more ads". Never shown to Pro users. With Reduce Motion on it appears without sliding.
+- [ ] **Paywall:** each entry point opens with its own art (burns ring, Chicxulub globe, iron vs comet, crossed-out ad). The Free vs Pro table fits without clipping in German. Restore purchase and Ad privacy choices still work. With Reduce Motion on, the burns glow doesn't pulse.
+- [ ] Every free feature still works with no purchase and no ads watched: any size, speed, place, rock, the three main rings, population numbers.
+- [ ] Dev build: long-press the paywall title → the upgrade-stats screen counts each prompt you opened and credits a sandbox purchase to the prompt that led to it. In a release build, long-press does nothing.
+- [ ] Translations of the new text (lock badges, free-try card, nudge, paywall art titles, comparison table) look right in Turkish, German and Japanese.
