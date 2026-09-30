@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: radius.lg,
     borderBottomRightRadius: radius.lg,
   },
-  haze: { ...StyleSheet.absoluteFillObject, backgroundColor: '#7A2E12' },
+  haze: { ...StyleSheet.absoluteFill, backgroundColor: '#7A2E12' },
   globalBanner: {
     position: 'absolute',
     alignSelf: 'center',
