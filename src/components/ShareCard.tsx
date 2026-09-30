@@ -29,6 +29,11 @@ interface Props {
   onReady: () => void;
 }
 
+const WORDMARK = require('../../assets/brand/wordmark.png');
+const WORDMARK_ASPECT = 1543 / 488;
+/** Height of the wordmark at the top of the card. */
+const BRAND_H = 30;
+
 export const CARD_ASPECT = 5 / 4; // height / width — Instagram-feed friendly
 
 /**
@@ -43,7 +48,13 @@ export const ShareCard = forwardRef<View, Props>(function ShareCard(
   const height = Math.round(width * CARD_ASPECT);
   const pad = Math.round(width * 0.06);
   const mapW = width - pad * 2;
-  const mapH = Math.round(height * 0.52);
+  // The map takes whatever the text leaves: measure the text block first (it
+  // varies with language and place name), then size the map to fill the rest.
+  const [textH, setTextH] = useState<number | null>(null);
+  const brandH = Math.round(pad * 0.8 + BRAND_H);
+  const MAP_TOP = 14;
+  const GAP = Math.round(pad * 0.6);
+  const mapH = textH === null ? 0 : Math.max(Math.round(height * 0.3), height - brandH - MAP_TOP - GAP - textH);
 
   const map = useRef<MapView>(null);
   const [snapshot, setSnapshot] = useState<string | null>(null);
@@ -57,7 +68,7 @@ export const ShareCard = forwardRef<View, Props>(function ShareCard(
 
   const frameRadius = rings[0]?.radiusM ?? FALLBACK_FRAME_RADIUS_M;
   const frame = useMemo(
-    () => snapshotFrame(location.latitude, location.longitude, frameRadius, mapW, mapH),
+    () => snapshotFrame(location.latitude, location.longitude, frameRadius, mapW, Math.max(mapH, 1)),
     [location.latitude, location.longitude, frameRadius, mapW, mapH],
   );
 
@@ -77,6 +88,9 @@ export const ShareCard = forwardRef<View, Props>(function ShareCard(
       onReady();
     }
   }
+
+  // Text is sized to the card, not the phone's text-size setting: it's an image.
+  const fs = (k: number) => ({ fontSize: Math.round(width * k * 10) / 10 });
 
   const energy = formatEnergyMt(result.effectiveEnergyMt);
   const kicker = upper(
@@ -104,75 +118,90 @@ export const ShareCard = forwardRef<View, Props>(function ShareCard(
       </Svg>
 
       <View style={[styles.brand, { paddingHorizontal: pad, paddingTop: pad * 0.8 }]}>
-        <View style={styles.brandDot} />
-        <Text style={styles.brandText}>BLAST RADIUS</Text>
+        <Image source={WORDMARK} style={{ width: BRAND_H * WORDMARK_ASPECT, height: BRAND_H }} resizeMode="contain" />
       </View>
 
-      <View style={[styles.map, { marginHorizontal: pad, width: mapW, height: mapH }]}>
-        {snapshot ? (
-          <Image source={{ uri: snapshot }} style={{ width: mapW, height: mapH }} onLoad={onReady} />
-        ) : (
-          <MapView
-            ref={map}
-            style={{ width: mapW, height: mapH }}
-            initialRegion={frame.region}
-            userInterfaceStyle="dark"
-            scrollEnabled={false}
-            zoomEnabled={false}
-            rotateEnabled={false}
-            pitchEnabled={false}
-            showsPointsOfInterests={false}
-            onMapReady={takeSnapshot}
-          />
-        )}
-        <Svg style={StyleSheet.absoluteFill} width={mapW} height={mapH} pointerEvents="none">
-          {rings.map((r) => {
-            const s = RING_STYLE[r.kind];
-            return (
-              <Circle
-                key={r.kind}
-                cx={mapW / 2}
-                cy={mapH / 2}
-                r={Math.max(r.radiusM * frame.pxPerMeter, r.kind === 'crater' ? 3 : 0)}
-                fill={s.fill}
-                stroke={s.stroke}
-                strokeWidth={1.5}
-              />
-            );
-          })}
-          <Circle cx={mapW / 2} cy={mapH / 2} r={3.5} fill={colors.accent} stroke={colors.bg} strokeWidth={1.5} />
-        </Svg>
-      </View>
+      {textH !== null && (
+        <View style={[styles.map, { marginTop: MAP_TOP, marginHorizontal: pad, width: mapW, height: mapH }]}>
+          {snapshot ? (
+            <Image source={{ uri: snapshot }} style={{ width: mapW, height: mapH }} onLoad={onReady} />
+          ) : (
+            <MapView
+              ref={map}
+              style={{ width: mapW, height: mapH }}
+              initialRegion={frame.region}
+              userInterfaceStyle="dark"
+              scrollEnabled={false}
+              zoomEnabled={false}
+              rotateEnabled={false}
+              pitchEnabled={false}
+              showsPointsOfInterests={false}
+              onMapReady={takeSnapshot}
+            />
+          )}
+          <Svg style={StyleSheet.absoluteFill} width={mapW} height={mapH} pointerEvents="none">
+            {rings.map((r) => {
+              const s = RING_STYLE[r.kind];
+              return (
+                <Circle
+                  key={r.kind}
+                  cx={mapW / 2}
+                  cy={mapH / 2}
+                  r={Math.max(r.radiusM * frame.pxPerMeter, r.kind === 'crater' ? 3 : 0)}
+                  fill={s.fill}
+                  stroke={s.stroke}
+                  strokeWidth={1.5}
+                />
+              );
+            })}
+            <Circle cx={mapW / 2} cy={mapH / 2} r={3.5} fill={colors.accent} stroke={colors.bg} strokeWidth={1.5} />
+          </Svg>
+        </View>
+      )}
 
-      <View style={{ paddingHorizontal: pad, paddingTop: pad * 0.8, gap: 4 }}>
-        <Text style={styles.kicker} numberOfLines={2}>
-          {kicker}
-        </Text>
-        <Text style={[styles.headline, { fontSize: width * 0.075 }]} numberOfLines={2} adjustsFontSizeToFit>
-          {energy.value} {energy.unit} —{'\n'}
-          {hiroshima}
-        </Text>
-      </View>
+      {/* Text block pinned to the bottom; its measured height sizes the map. */}
+      <View
+        style={styles.bottom}
+        onLayout={(e) => {
+          const h = Math.ceil(e.nativeEvent.layout.height);
+          setTextH((old) => (old === null ? h : old));
+        }}
+      >
+        <View style={{ paddingHorizontal: pad, paddingTop: pad * 0.8, gap: 4 }}>
+          <Text style={[styles.kicker, fs(0.031)]} numberOfLines={2} allowFontScaling={false}>
+            {kicker}
+          </Text>
+          <Text style={[styles.headline, { fontSize: width * 0.07 }]} numberOfLines={2} adjustsFontSizeToFit allowFontScaling={false}>
+            {energy.value} {energy.unit} —{'\n'}
+            {hiroshima}
+          </Text>
+        </View>
 
-      <View style={[styles.legend, { paddingHorizontal: pad, paddingTop: pad * 0.6 }]}>
-        {[...rings].reverse().map((r) => (
-          <View key={r.kind} style={styles.legendItem}>
-            <View style={[styles.dot, { backgroundColor: RING_STYLE[r.kind].color }]} />
-            <Text style={styles.legendText}>
-              {ringLabel(r.kind)} {r.capped ? '>' : ''}
-              {formatDistance(r.kind === 'crater' ? r.radiusM * 2 : r.radiusM, units)}
+        <View style={[styles.legend, { paddingHorizontal: pad, paddingTop: pad * 0.6 }]}>
+          {[...rings].reverse().map((r) => (
+            <View key={r.kind} style={styles.legendItem}>
+              <View style={[styles.dot, { backgroundColor: RING_STYLE[r.kind].color }]} />
+              <Text style={[styles.legendText, fs(0.032)]} allowFontScaling={false}>
+                {ringLabel(r.kind)} {r.capped ? '>' : ''}
+                {formatDistance(r.kind === 'crater' ? r.radiusM * 2 : r.radiusM, units)}
+              </Text>
+            </View>
+          ))}
+          {result.airburstAltitudeM !== null && rings.length === 0 && (
+            <Text style={[styles.legendText, fs(0.032)]} allowFontScaling={false}>
+              {t('share.airburst')}
             </Text>
-          </View>
-        ))}
-        {result.airburstAltitudeM !== null && rings.length === 0 && (
-          <Text style={styles.legendText}>{t('share.airburst')}</Text>
-        )}
-      </View>
+          )}
+        </View>
 
-      <View style={{ flex: 1 }} />
-      <View style={[styles.footer, { paddingHorizontal: pad, paddingBottom: pad * 0.8 }]}>
-        <Text style={styles.footerText}>{t('share.footer')}</Text>
-        <Text style={styles.footerText}>{result.seismicMagnitude !== null ? t('share.quake', { m: dec(result.seismicMagnitude, 1) }) : ''}</Text>
+        <View style={[styles.footer, { paddingHorizontal: pad, paddingTop: pad * 0.5, paddingBottom: pad * 0.8 }]}>
+          <Text style={[styles.footerText, styles.footerLeft, fs(0.028)]} allowFontScaling={false} numberOfLines={1}>
+            {t('share.footer')}
+          </Text>
+          <Text style={[styles.footerText, fs(0.028)]} allowFontScaling={false}>
+            {result.seismicMagnitude !== null ? t('share.quake', { m: dec(result.seismicMagnitude, 1) }) : ''}
+          </Text>
+        </View>
       </View>
     </View>
   );
@@ -180,9 +209,8 @@ export const ShareCard = forwardRef<View, Props>(function ShareCard(
 
 const styles = StyleSheet.create({
   brand: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  brandDot: { width: 18, height: 18, borderRadius: 9, backgroundColor: colors.accent },
-  brandText: { fontSize: 14, letterSpacing: 1, color: colors.text, fontFamily: fonts.display },
-  map: { marginTop: 14, borderRadius: 20, overflow: 'hidden', backgroundColor: '#0F1424' },
+  bottom: { position: 'absolute', left: 0, right: 0, bottom: 0 },
+  map: { borderRadius: 20, overflow: 'hidden', backgroundColor: '#0F1424' },
   kicker: { fontSize: 11, letterSpacing: 1.5, color: colors.muted, fontFamily: fonts.bodySemi },
   headline: { color: colors.text, fontFamily: fonts.display, lineHeight: undefined },
   legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 12, rowGap: 4 },
@@ -190,5 +218,6 @@ const styles = StyleSheet.create({
   dot: { width: 7, height: 7, borderRadius: 4 },
   legendText: { fontSize: 11, color: colors.text, fontFamily: fonts.bodyMedium },
   footer: { flexDirection: 'row', justifyContent: 'space-between' },
+  footerLeft: { flexShrink: 1, marginRight: 8 },
   footerText: { fontSize: 11, color: colors.dim, fontFamily: fonts.body },
 });

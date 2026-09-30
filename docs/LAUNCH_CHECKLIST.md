@@ -81,11 +81,12 @@ release builds.
 - [ ] Reduce Motion on: no camera moves, rings appear directly.
 - [ ] Aftermath timeline: tap each stage. Free users can read the first two; the others show the lock and open the paywall on the timeline. A small impact (25 m) shows only two stages ending with "no lasting effects". Chicxulub shows the impact winter with the Brugger et al. source line. Imperial units show °F and mi².
 - [ ] Aftermath on the map: tapping a stage scrolls up to the map and shows that stage's text in a caption on the map (‹ › to step, ✕ to close), so there is no need to scroll back down. Each stage animates on the map, lined up with the impact: fireball pulse, shock pulses, debris raining into the ejecta zone, embers in the burning area, drifting dust, snow for the impact winter. The particles hide while the map moves and come back when it stops. Check all six stages on Chicxulub (continent-sized zones) and on a 450 m impact: every stage must show its own particles inside the visible map, and the general red haze disappears while a stage is open.
+- [ ] Share card: nothing is cut off at the bottom (try a long place name, German, and the largest iOS text size); the wordmark is at the top.
 - [ ] Chicxulub shows "🦖 Dinosaur killer" under its chip and on the result card.
 - [ ] Famous strikes: tapping the selected preset again deselects it and restores the asteroid you had before.
 - [ ] Rock, iron and comet each have their own icon and description on the asteroid screen and their own meteor in the strike (orange rock, thin white-hot iron with sparks, long blue comet with two tails).
 - [ ] New app icon on the home screen (also check Settings → Home Screen → Dark and Tinted). Native splash (expo-splash-screen plugin) is the wordmark on deep violet, and the intro picks up from it without a jump.
-- [ ] Launch intro: the wordmark moves down as the impact artwork rises in behind it, flash and shake on impact, the rings flare, then the tagline. Tap skips. Check on a small phone (SE) and a Pro Max that nothing is cut off.
+- [ ] Launch intro: the wordmark moves down as the Earth rises in; the meteor streaks in from the top right, growing as it comes closer, and stops just above the ground; the rings light up with a flash, then the tagline. No shaking. Tap skips. Check on a small phone (SE) and a Pro Max.
 - [ ] Rewarded ads: after 3 ad unlocks in a day the paywall hides "Watch a short ad" and says to come back tomorrow; the count resets the next day.
 
 - [ ] Search, tap-to-drop, and "use my location" all place the pin.
