@@ -41,7 +41,7 @@ src/
   state/          simulation.tsx (location + params + memoised result), premium.tsx (StoreKit via expo-iap), world.tsx (world-population counter), units.tsx (km/miles)
   ads/            ads.tsx (UMP consent → ATT → AdMob init, interstitial pacing, rewarded ads, post-ad nudge), AdBanner.tsx
   upsell/         entitlements.ts (free tries, rewarded unlocks, upgrade-source counters — pure, unit-tested), upsell.tsx (state + AsyncStorage)
-  components/     IntroSplash (launch intro), ImpactMap, StrikeAnimation (per-composition looks in CompositionIcon), StageEffects, GlobeView (+ globe.ts), PopulationCard, ShareCard, RingLegend, UI primitives, icons
+  components/     IntroSplash (launch intro), ImpactMap, StrikeAnimation (per-composition looks in CompositionIcon), StageEffects, GlobeView (Skia + Reanimated, maths in globeProjection.ts; globe.ts draws the still SVG globe), PopulationCard, ShareCard, RingLegend, UI primitives, icons
   lib/geo.ts      map framing + Web-Mercator math for the share-card snapshot
 docs/
   PHYSICS.md          equations, constants and known limitations

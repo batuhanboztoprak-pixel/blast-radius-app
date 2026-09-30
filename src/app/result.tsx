@@ -99,7 +99,11 @@ export default function Result() {
   const largest = result.rings[0]?.radiusM ?? 0;
   const globeAvailable = largest >= GLOBE_AVAILABLE_ABOVE_M;
   // The map is the show: edge to edge, most of the first screen.
-  const mapHeight = Math.max(380, Math.round(height * 0.62));
+  // The globe gets (almost) the whole screen; a strip of the page peeks out below
+  // so it's clear the details are a scroll away.
+  const mapHeight = view === 'globe' ? Math.round(height - 72) : Math.max(380, Math.round(height * 0.62));
+  const globeTop = insets.top + 132; // below the top bar, tools and the global-effects banner
+  const globeH = mapHeight - globeTop - 60;
   const globalFraction = world.lastStrike?.impact.globalFraction ?? 0;
   const strikeDone = playedToken === token;
   const focusRing = focus ? rings.find((r) => r.kind === focus) : undefined;
@@ -186,10 +190,13 @@ export default function Result() {
                 latitude={location.latitude}
                 longitude={location.longitude}
                 rings={rings}
-                size={Math.min(mapHeight - insets.top - 110, width - 32)}
+                width={width}
+                height={globeH}
                 haze={globalFraction}
+                style={{ marginTop: globeTop }}
               />
               <Text style={styles.globeHint}>{t('result.dragToSpin')}</Text>
+              <Text style={styles.globeScroll}>{t('result.scrollDetails')} ↓</Text>
             </View>
           )}
           {tint && (
@@ -429,8 +436,9 @@ const styles = StyleSheet.create({
   },
   globalDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
   globalText: { fontSize: 12, color: colors.text, fontFamily: fonts.bodySemi, flexShrink: 1 },
-  globe: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  globeHint: { position: 'absolute', bottom: 8, fontSize: 10, color: colors.dim, fontFamily: fonts.body },
+  globe: { flex: 1 },
+  globeHint: { position: 'absolute', bottom: 34, left: 0, right: 0, textAlign: 'center', fontSize: 11, color: colors.dim, fontFamily: fonts.body },
+  globeScroll: { position: 'absolute', bottom: 10, left: 0, right: 0, textAlign: 'center', fontSize: 12, color: colors.muted, fontFamily: fonts.bodyMedium },
   mapTools: {
     position: 'absolute',
     left: 12,

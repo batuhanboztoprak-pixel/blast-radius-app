@@ -94,7 +94,7 @@ release builds.
 - [ ] Strike animation: the meteor lands exactly on the pin, the expanding rings end at the same size as the map rings (no jump when they swap), the phone buzzes on impact, and **Replay** works after zooming to a ring.
 - [ ] With Settings → Accessibility → Motion → Reduce Motion on, the rings appear without the animation.
 - [ ] Tapping each legend row zooms to that ring; tapping it again frames them all.
-- [ ] A 5 km+ impact switches to the globe after the animation; dragging spins it smoothly and a flick keeps it coasting (while moving it draws a lighter coastline, `LAND_FAST` in `globe.ts`; full detail comes back when it stops). Judge smoothness in a release/preview build: dev builds run JavaScript several times slower.
+- [ ] A 5 km+ impact switches to the globe after the animation. The globe fills the screen with "Scroll down for details" peeking below; dragging spins it smoothly (Skia, drawn on the UI thread), a flick keeps it coasting, two fingers zoom in up to 6× and the rings stay attached to the ground. Scrolling the page still works from the strip below the globe.
 - [ ] Map ↔ Globe toggle doesn't replay the animation.
 - [ ] Casualties and "world population left" look sensible (e.g. 150 m over New York → a few million), the counter drops with each strike and survives an app restart, and **Reset Earth** restores 8.3 billion.
 - [ ] Languages: switch the iPhone (or Settings → Blast Radius → Language) to Turkish, Japanese and German. Every screen is translated, nothing is cut off (German is longest), Japanese text renders (it falls back to the system font), the location and tracking prompts are translated, and numbers use local separators.

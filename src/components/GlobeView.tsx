@@ -1,17 +1,21 @@
+import { Canvas, Circle, Group, Path, RadialGradient, usePathValue } from '@shopify/react-native-skia';
 import { useEffect, useMemo, useState } from 'react';
-import { PanResponder, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import Svg, { Circle, Defs, Path, RadialGradient, Stop } from 'react-native-svg';
+import { PanResponder, StyleSheet, View, type GestureResponderEvent, type StyleProp, type ViewStyle } from 'react-native';
+import { cancelAnimation, useDerivedValue, useSharedValue, withDecay, withTiming } from 'react-native-reanimated';
 
 import type { Ring } from '../physics/impact';
+import { geoCircle } from '../vendor/d3-geo';
 import { colors } from '../theme';
-import { globePaths } from './globe';
+import { drawShapes, GRATICULE, LAND_SHAPES, pushRing, type Shapes } from './globeProjection';
 import { RING_STYLE } from './rings';
 
 interface Props {
   latitude: number;
   longitude: number;
   rings: Ring[];
-  size: number;
+  /** Canvas size. The globe fills the shorter side at zoom 1; pinch zooms in up to 6×. */
+  width: number;
+  height: number;
   /**
    * Share of humanity outside the rings killed by global effects (0–1). Tints the
    * whole planet so it's clear the damage doesn't stop at the rings.
@@ -20,131 +24,177 @@ interface Props {
   style?: StyleProp<ViewStyle>;
 }
 
-/** Degrees the globe turns per pixel dragged. */
+/** Degrees the globe turns per point dragged, at zoom 1. */
 const DRAG_DEG_PER_PX = 0.35;
+const MAX_ZOOM = 6;
+const KM_PER_DEG = 111.195;
+const RAD = Math.PI / 180;
 
 /**
  * An orthographic globe centred on the impact, for continent-scale rings that a
- * flat map distorts. Drag to spin it; rings are true geodesic circles.
- * Give it a `key` of the impact coordinates so it re-centres when they change.
+ * flat map distorts. Drag to spin (a flick keeps it turning), pinch to zoom.
+ * Drawn with Skia on the UI thread, so it stays smooth. Rings are true geodesic
+ * circles. Give it a `key` of the impact coordinates so it re-centres when they change.
  */
-export function GlobeView({ latitude, longitude, rings, size, haze = 0, style }: Props) {
-  const [view, setView] = useState({ lat: latitude, lon: longitude });
-  /** While dragging or coasting, draw a lighter globe so it keeps up with the finger. */
-  const [moving, setMoving] = useState(false);
+export function GlobeView({ latitude, longitude, rings, width, height, haze = 0, style }: Props) {
+  const lat = useSharedValue(latitude);
+  const lon = useSharedValue(longitude);
+  const zoom = useSharedValue(1);
+  const baseR = Math.min(width, height) / 2 - 8;
+  const cx = width / 2;
+  const cy = height / 2;
 
-  // Gesture bookkeeping lives in a plain object created once, not in refs, so
-  // nothing mutable is read during render.
-  const [gesture] = useState(() => {
+  // Ring circles depend on the strike, not the view: build them once.
+  const ringShapes = useMemo(
+    () =>
+      rings.map((r) => {
+        const s: Shapes = { xyz: [], runs: [] };
+        const circle = geoCircle()
+          .center([longitude, latitude])
+          .precision(2)
+          .radius(Math.min(Math.max(r.radiusM / 1000 / KM_PER_DEG, 0.25), 179.5))();
+        for (const ring of circle.coordinates) pushRing(s, ring);
+        return { kind: r.kind, s };
+      }),
+    [rings, latitude, longitude],
+  );
+  // Up to four rings (windows, thermal, severe, crater), largest first.
+  const r0 = ringShapes[0]?.s ?? null;
+  const r1 = ringShapes[1]?.s ?? null;
+  const r2 = ringShapes[2]?.s ?? null;
+  const r3 = ringShapes[3]?.s ?? null;
+
+  const radius = useDerivedValue(() => baseR * zoom.value);
+  const land = usePathValue((p) => {
+    'worklet';
+    drawShapes(p, LAND_SHAPES, lat.value, lon.value, baseR * zoom.value, cx, cy, true);
+  });
+  const grat = usePathValue((p) => {
+    'worklet';
+    drawShapes(p, GRATICULE, lat.value, lon.value, baseR * zoom.value, cx, cy, false);
+  });
+  const ring0 = usePathValue((p) => {
+    'worklet';
+    if (r0) drawShapes(p, r0, lat.value, lon.value, baseR * zoom.value, cx, cy, true);
+  });
+  const ring1 = usePathValue((p) => {
+    'worklet';
+    if (r1) drawShapes(p, r1, lat.value, lon.value, baseR * zoom.value, cx, cy, true);
+  });
+  const ring2 = usePathValue((p) => {
+    'worklet';
+    if (r2) drawShapes(p, r2, lat.value, lon.value, baseR * zoom.value, cx, cy, true);
+  });
+  const ring3 = usePathValue((p) => {
+    'worklet';
+    if (r3) drawShapes(p, r3, lat.value, lon.value, baseR * zoom.value, cx, cy, true);
+  });
+  const ringPaths = [ring0, ring1, ring2, ring3];
+
+  // The impact marker, hidden on the far side.
+  const impact = useDerivedValue(() => {
+    const sl = Math.sin(lon.value * RAD);
+    const cl = Math.cos(lon.value * RAD);
+    const sa = Math.sin(lat.value * RAD);
+    const ca = Math.cos(lat.value * RAD);
+    const c = Math.cos(latitude * RAD);
+    const x = c * Math.sin(longitude * RAD);
+    const y = Math.sin(latitude * RAD);
+    const z = c * Math.cos(longitude * RAD);
+    const px = x * cl - z * sl;
+    const z1 = x * sl + z * cl;
+    const py = y * ca - z1 * sa;
+    const pz = y * sa + z1 * ca;
+    const R = baseR * zoom.value;
+    return { x: cx + R * px, y: cy - R * py, on: pz > 0 ? 1 : 0 };
+  });
+  const impactX = useDerivedValue(() => impact.value.x);
+  const impactY = useDerivedValue(() => impact.value.y);
+  const impactOn = useDerivedValue(() => impact.value.on);
+  const oceanCenter = useDerivedValue(() => ({ x: cx - radius.value * 0.2, y: cy - radius.value * 0.3 }));
+  const oceanR = useDerivedValue(() => radius.value * 1.5);
+  const shadeR = useDerivedValue(() => radius.value * 1.4);
+  const glowR = useDerivedValue(() => radius.value + 6);
+
+  // Gestures: one finger spins (and coasts after a flick), two fingers zoom.
+  const [pan] = useState(() => {
+    const g = { lat: 0, lon: 0, pinch0: 0, zoom0: 1, pinching: false };
+    const spread = (e: GestureResponderEvent) => {
+      const [a, b] = e.nativeEvent.touches;
+      return Math.hypot(a.pageX - b.pageX, a.pageY - b.pageY);
+    };
     const clampLat = (v: number) => Math.max(-89, Math.min(89, v));
-    const g = {
-      start: { lat: latitude, lon: longitude },
-      pending: { lat: latitude, lon: longitude },
-      frame: null as number | null,
-      coast: null as number | null,
-    };
-    const push = () => {
-      // At most one re-projection per frame.
-      if (g.frame === null) {
-        g.frame = requestAnimationFrame(() => {
-          g.frame = null;
-          setView(g.pending);
-        });
-      }
-    };
-    const stopCoast = () => {
-      if (g.coast !== null) cancelAnimationFrame(g.coast);
-      g.coast = null;
-    };
-    const pan = PanResponder.create({
+    return PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       // Keep the gesture away from the parent ScrollView while spinning.
       onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: () => {
-        stopCoast();
-        g.start = g.pending;
-        setMoving(true);
+        cancelAnimation(lat);
+        cancelAnimation(lon);
+        g.lat = lat.value;
+        g.lon = lon.value;
+        g.pinching = false;
       },
-      onPanResponderMove: (_, d) => {
-        g.pending = { lat: clampLat(g.start.lat + d.dy * DRAG_DEG_PER_PX), lon: g.start.lon - d.dx * DRAG_DEG_PER_PX };
-        push();
+      onPanResponderMove: (e, d) => {
+        if (e.nativeEvent.touches.length >= 2) {
+          if (!g.pinching) {
+            g.pinching = true;
+            g.pinch0 = spread(e);
+            g.zoom0 = zoom.value;
+          }
+          zoom.value = Math.max(1, Math.min(MAX_ZOOM, (g.zoom0 * spread(e)) / Math.max(g.pinch0, 1)));
+          return;
+        }
+        if (g.pinching) {
+          // Second finger lifted: continue spinning from here without a jump.
+          g.pinching = false;
+          g.lat = lat.value - (d.dy * DRAG_DEG_PER_PX) / zoom.value;
+          g.lon = lon.value + (d.dx * DRAG_DEG_PER_PX) / zoom.value;
+        }
+        const k = DRAG_DEG_PER_PX / zoom.value;
+        lat.value = clampLat(g.lat + d.dy * k);
+        lon.value = g.lon - d.dx * k;
       },
       onPanResponderRelease: (_, d) => {
-        // Keep spinning with the finger's speed, slowing down, then redraw in full detail.
-        let vx = d.vx * 16 * DRAG_DEG_PER_PX; // degrees per frame
-        let vy = d.vy * 16 * DRAG_DEG_PER_PX;
-        const step = () => {
-          vx *= 0.93;
-          vy *= 0.93;
-          if (Math.abs(vx) + Math.abs(vy) < 0.05) {
-            g.coast = null;
-            setMoving(false);
-            return;
-          }
-          g.pending = { lat: clampLat(g.pending.lat + vy), lon: g.pending.lon - vx };
-          setView(g.pending);
-          g.coast = requestAnimationFrame(step);
-        };
-        g.coast = requestAnimationFrame(step);
-      },
-      onPanResponderTerminate: () => {
-        stopCoast();
-        setMoving(false);
+        if (g.pinching) return;
+        const k = (DRAG_DEG_PER_PX / zoom.value) * 1000; // px/ms → degrees/s
+        lon.value = withDecay({ velocity: -d.vx * k, deceleration: 0.994 });
+        lat.value = withDecay({ velocity: d.vy * k, deceleration: 0.994, clamp: [-89, 89] });
       },
     });
-    return { g, pan, stopCoast };
   });
 
-  useEffect(
-    () => () => {
-      if (gesture.g.frame !== null) cancelAnimationFrame(gesture.g.frame);
-      gesture.stopCoast();
-    },
-    [gesture],
-  );
-
-  const paths = useMemo(
-    () => globePaths(latitude, longitude, rings, size, view.lat, view.lon, moving ? 'fast' : 'full'),
-    [latitude, longitude, rings, size, view.lat, view.lon, moving],
-  );
+  // Double-tap-free zoom reset when the strike changes.
+  useEffect(() => {
+    zoom.value = withTiming(1, { duration: 250 });
+  }, [latitude, longitude, zoom]);
 
   return (
-    <View style={[styles.wrap, { width: size, height: size }, style]} {...gesture.pan.panHandlers}>
-      <Svg width={size} height={size}>
-        <Defs>
-          <RadialGradient id="ocean" cx="40%" cy="35%" r="75%">
-            <Stop offset="0" stopColor="#1A2E52" />
-            <Stop offset="1" stopColor="#0A1326" />
-          </RadialGradient>
-          <RadialGradient id="shade" cx="40%" cy="35%" r="70%">
-            <Stop offset="0.6" stopColor="#000" stopOpacity="0" />
-            <Stop offset="1" stopColor="#000" stopOpacity="0.45" />
-          </RadialGradient>
-        </Defs>
-        <Circle cx={size / 2} cy={size / 2} r={size / 2 - 1} fill={colors.blue} opacity={0.08} />
-        <Path d={paths.sphere} fill="url(#ocean)" />
-        <Path d={paths.graticule} stroke="rgba(255,255,255,0.08)" strokeWidth={0.75} fill="none" />
-        <Path d={paths.land} fill="#34435F" />
-        {haze > 0 && <Path d={paths.sphere} fill="#8A3414" opacity={0.18 + 0.32 * haze} />}
-        {paths.rings.map((r) => (
-          <Path
-            key={r.kind}
-            d={r.d}
-            fill={RING_STYLE[r.kind].fill}
-            stroke={RING_STYLE[r.kind].stroke}
-            strokeWidth={1.5}
-          />
+    <View style={[{ width, height }, styles.wrap, style]} {...pan.panHandlers}>
+      <Canvas style={{ width, height }}>
+        <Circle cx={cx} cy={cy} r={glowR} color={colors.blue} opacity={0.1} />
+        <Circle cx={cx} cy={cy} r={radius}>
+          <RadialGradient c={oceanCenter} r={oceanR} colors={['#1A2E52', '#0A1326']} />
+        </Circle>
+        <Path path={grat} style="stroke" strokeWidth={0.75} color="rgba(255,255,255,0.08)" />
+        <Path path={land} color="#34435F" />
+        {haze > 0 && <Circle cx={cx} cy={cy} r={radius} color="#8A3414" opacity={0.18 + 0.32 * haze} />}
+        {ringShapes.slice(0, 4).map((r, i) => (
+          <Group key={r.kind}>
+            <Path path={ringPaths[i]} color={RING_STYLE[r.kind].fill} />
+            <Path path={ringPaths[i]} style="stroke" strokeWidth={1.5} color={RING_STYLE[r.kind].stroke} />
+          </Group>
         ))}
-        <Path d={paths.sphere} fill="url(#shade)" />
-        <Path d={paths.sphere} fill="none" stroke="rgba(74,158,255,0.35)" strokeWidth={1} />
-        {paths.impact && (
-          <>
-            <Circle cx={paths.impact[0]} cy={paths.impact[1]} r={7} fill={colors.accent} opacity={0.3} />
-            <Circle cx={paths.impact[0]} cy={paths.impact[1]} r={3.5} fill={colors.accent} />
-          </>
-        )}
-      </Svg>
+        <Circle cx={cx} cy={cy} r={radius}>
+          <RadialGradient c={oceanCenter} r={shadeR} colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0)', 'rgba(0,0,0,0.45)']} positions={[0, 0.6, 1]} />
+        </Circle>
+        <Circle cx={cx} cy={cy} r={radius} style="stroke" strokeWidth={1} color="rgba(74,158,255,0.35)" />
+        <Group opacity={impactOn}>
+          <Circle cx={impactX} cy={impactY} r={7} color={colors.accent} opacity={0.3} />
+          <Circle cx={impactX} cy={impactY} r={3.5} color={colors.accent} />
+        </Group>
+      </Canvas>
     </View>
   );
 }
