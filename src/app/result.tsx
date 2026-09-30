@@ -1,11 +1,12 @@
 import { Redirect, router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AdBanner } from '../ads/AdBanner';
 import { useAds } from '../ads/ads';
 import { AftermathTimeline } from '../components/AftermathTimeline';
+import { TINT_COLOR, stageLayers } from '../components/aftermathLayers';
 import { GlobeView } from '../components/GlobeView';
 import { GLOBE_AVAILABLE_ABOVE_M, GLOBE_DEFAULT_ABOVE_M } from '../components/globe';
 import { ImpactMap } from '../components/ImpactMap';
@@ -25,7 +26,7 @@ import {
   formatYears,
   hiroshimaPercent,
 } from '../physics/format';
-import { aftermath } from '../physics/aftermath';
+import { aftermath, type StageId } from '../physics/aftermath';
 import type { Ring } from '../physics/impact';
 import { presetText } from '../physics/presets';
 import { usePremium } from '../state/premium';
@@ -53,29 +54,31 @@ export default function Result() {
   const [strikeToken, setStrikeToken] = useState(1);
   const [playedToken, setPlayedToken] = useState(0);
   const [view, setView] = useState<'map' | 'globe'>('map');
+  // The shock wave is the "normal" map view; other stages paint their own layers.
+  const [stageId, setStageId] = useState<StageId>('blast');
+  const scroll = useRef<ScrollView>(null);
 
   // Unlocks earned from a rewarded ad apply to the strike on screen.
   const burnsTicket = hasTicket(upsell.state, 'burns');
   const aftermathTicket = hasTicket(upsell.state, 'aftermath');
-  const cinematicTicket = hasTicket(upsell.state, 'cinematic');
   useEffect(() => {
     if (!isPro && burnsTicket) unlockForRun('burns');
   }, [isPro, burnsTicket, unlockForRun]);
   useEffect(() => {
     if (!isPro && aftermathTicket) unlockForRun('aftermath');
   }, [isPro, aftermathTicket, unlockForRun]);
-  useEffect(() => {
-    if (!isPro && cinematicTicket && !run?.cinematic) unlockForRun('cinematic');
-  }, [isPro, cinematicTicket, run?.cinematic, unlockForRun]);
 
   if (!result || !location) return <Redirect href="/" />;
 
   const burnsUnlocked = isPro || !!run?.burns;
   const cinematic = isPro || !!run?.cinematic;
-  // Becoming cinematic (Pro bought, or an ad watched) changes the token, so the
-  // strike plays again straight away in the new style.
+  // Becoming cinematic (e.g. Pro bought on this screen) changes the token, so
+  // the strike plays again straight away in the new style.
   const token = strikeToken * 2 + (cinematic ? 1 : 0);
   const stages = aftermath(result);
+  const aftermathUnlocked = isPro || !!run?.aftermath;
+  const stage = stages.find((s) => s.id === stageId);
+  const stageReadable = !!stage && (!stage.pro || aftermathUnlocked);
   const rings = visibleRings(result.rings, burnsUnlocked);
   const energy = formatEnergyMt(result.effectiveEnergyMt);
   const hiroshima =
@@ -98,8 +101,11 @@ export default function Result() {
   const globalFraction = world.lastStrike?.impact.globalFraction ?? 0;
   const strikeDone = playedToken === token;
   const focusRing = focus ? rings.find((r) => r.kind === focus) : undefined;
+  const layers = stageLayers(stageReadable && strikeDone ? stage : undefined, result);
+  const tint = layers.tint !== 'none' ? TINT_COLOR[layers.tint] : null;
   const replay = () => {
     setFocus(null);
+    setStageId('blast');
     setView('map');
     setStrikeToken((t) => t + 1);
   };
@@ -114,14 +120,16 @@ export default function Result() {
 
   return (
     <SafeAreaView style={styles.screen} edges={[]}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView ref={scroll} contentContainerStyle={styles.scroll}>
         <View style={[styles.mapWrap, { height: mapHeight }]}>
           {view === 'map' ? (
             <>
               <ImpactMap
                 location={location}
                 rings={rings}
-                focusRadiusM={focusRing?.radiusM ?? null}
+                focusRadiusM={focusRing?.radiusM ?? layers.extentM ?? null}
+                stageCircles={layers.circles}
+                hideRings={layers.hideRings}
                 // Only unplayed strikes animate, so flipping back from the globe doesn't replay.
                 strikeToken={playedToken === token ? 0 : token}
                 // Continent-sized rings read better on the globe once the strike has played.
@@ -136,7 +144,10 @@ export default function Result() {
               <RingLegend
                 rings={rings}
                 selected={focus}
-                onSelect={setFocus}
+                onSelect={(k) => {
+                  setFocus(k);
+                  setStageId('blast');
+                }}
                 onLockedThermal={lockedThermal ? () => openBurns('burns-legend') : undefined}
               />
             </>
@@ -153,7 +164,11 @@ export default function Result() {
               <Text style={styles.globeHint}>{t('result.dragToSpin')}</Text>
             </View>
           )}
-          {view === 'map' && strikeDone && globalFraction > 0 && (
+          {tint && (
+            // Aftermath stage over the whole map: fires, dark skies, frost.
+            <View pointerEvents="none" style={[styles.haze, { backgroundColor: tint.color, opacity: tint.opacity }]} />
+          )}
+          {!tint && view === 'map' && strikeDone && globalFraction > 0 && (
             // Everything beyond the rings is hit too: tint the whole map.
             <View pointerEvents="none" style={[styles.haze, { opacity: 0.12 + 0.2 * globalFraction }]} />
           )}
@@ -180,16 +195,7 @@ export default function Result() {
             <Pressable onPress={replay} style={styles.tool} accessibilityRole="button" accessibilityLabel={t('result.replayA11y')}>
               <Text style={styles.toolText}>{t('result.replay')}</Text>
             </Pressable>
-            {!cinematic && view === 'map' && (
-              <Pressable
-                onPress={() => upsell.openPaywall('cinematic', 'cinematic-chip', 'cinematic')}
-                style={[styles.tool, styles.proTool]}
-                accessibilityRole="button"
-                accessibilityLabel={t('result.cinematicA11y')}
-              >
-                <Text style={styles.toolText}>{t('result.cinematicPro')}</Text>
-              </Pressable>
-            )}
+
             {globeAvailable && (
               <View style={styles.segment}>
                 {(['map', 'globe'] as const).map((v) => (
@@ -222,7 +228,15 @@ export default function Result() {
         <AftermathTimeline
           stages={stages}
           units={units}
-          unlocked={isPro || !!run?.aftermath}
+          unlocked={aftermathUnlocked}
+          selected={stageId}
+          onSelect={(id) => {
+            setStageId(id);
+            setFocus(null);
+            if (view !== 'map') setView('map');
+            // Bring the map into view so the stage can be seen on it.
+            scroll.current?.scrollTo({ y: 0, animated: true });
+          }}
           onUnlock={() => upsell.openPaywall('aftermath', 'aftermath-stage', 'aftermath')}
         />
 
@@ -409,7 +423,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   toolText: { fontSize: 12, color: colors.text, fontFamily: fonts.bodySemi },
-  proTool: { borderColor: 'rgba(255,107,74,0.7)', marginLeft: 8, marginRight: 'auto' },
   segment: {
     flexDirection: 'row',
     backgroundColor: 'rgba(11,14,23,0.88)',

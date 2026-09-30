@@ -72,6 +72,11 @@ npx eas-cli@latest submit --platform ios
 
 ## 6. Before release: test on device
 
+Testing tip (dev builds only): long-press the "Set the asteroid" title to open the test
+tools. **Act as Pro** unlocks everything and hides ads without a purchase; **Reset**
+brings back the free tries, the cinematic taste and today's ad unlocks. Neither exists in
+release builds.
+
 - [ ] Cinematic strike (fresh install = first strike is cinematic): the camera starts high, dives in tilted as the meteor falls, the rings grow on the map from the impact, the camera pulls back and circles, then it settles top-down with the legend working. Check a 20 m airburst, a 450 m impact and Chicxulub. On the second strike a free user gets the normal animation and a "🎬 Cinematic · Pro" chip; watching an ad from it replays the strike cinematically.
 - [ ] Reduce Motion on: no camera moves, rings appear directly.
 - [ ] Aftermath timeline: tap each stage. Free users can read the first two; the others show the lock and open the paywall on the timeline. A small impact (25 m) shows only two stages ending with "no lasting effects". Chicxulub shows the impact winter with the Brugger et al. source line. Imperial units show °F and mi².

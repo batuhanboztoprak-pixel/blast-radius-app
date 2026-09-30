@@ -121,15 +121,31 @@ export function planSimulation(s: UpsellState, sel: Selection, isPro: boolean): 
   return { ok: true, next, freeTry, spent };
 }
 
+/** How a user can get the cinematic strike right now. */
+export type CinematicAccess = 'pro' | 'taste' | 'ticket' | 'locked';
+
+export function cinematicAccess(s: UpsellState, isPro: boolean): CinematicAccess {
+  if (isPro) return 'pro';
+  if (hasTicket(s, 'cinematic')) return 'ticket';
+  if (!s.cinematicTasted) return 'taste';
+  return 'locked';
+}
+
 /**
- * Whether this strike plays the cinematic sequence: always for Pro, once as a
- * taste on a free user's first strike, or when a rewarded ticket is waiting
- * (which it spends).
+ * Whether this strike plays the cinematic sequence, when the user chose it
+ * (`wanted`): always for Pro, or by spending a rewarded ticket, or the one-off
+ * taste. A ticket is spent before the taste so the free one isn't wasted.
+ * Choosing "Standard" spends nothing.
  */
-export function planCinematic(s: UpsellState, isPro: boolean): { cinematic: boolean; next: UpsellState } {
+export function planCinematic(
+  s: UpsellState,
+  isPro: boolean,
+  wanted = true,
+): { cinematic: boolean; next: UpsellState } {
+  if (!wanted) return { cinematic: false, next: s };
   if (isPro) return { cinematic: true, next: s };
-  if (!s.cinematicTasted) return { cinematic: true, next: { ...s, cinematicTasted: true } };
   if (hasTicket(s, 'cinematic')) return { cinematic: true, next: spendTicket(s, 'cinematic') };
+  if (!s.cinematicTasted) return { cinematic: true, next: { ...s, cinematicTasted: true } };
   return { cinematic: false, next: s };
 }
 

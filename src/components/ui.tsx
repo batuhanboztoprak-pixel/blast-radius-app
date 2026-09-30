@@ -84,11 +84,14 @@ export function StepHeader({
   title,
   subtitle,
   onBack,
+  onTitleLongPress,
 }: {
   step: string;
   title: string;
   subtitle?: string;
   onBack?: () => void;
+  /** Hidden gesture on the title (dev tools). */
+  onTitleLongPress?: () => void;
 }) {
   return (
     <View style={styles.header}>
@@ -100,7 +103,9 @@ export function StepHeader({
         )}
         <Text style={styles.step}>{step}</Text>
       </View>
-      <Text style={styles.title}>{title}</Text>
+      <Text style={styles.title} onLongPress={onTitleLongPress}>
+        {title}
+      </Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     </View>
   );

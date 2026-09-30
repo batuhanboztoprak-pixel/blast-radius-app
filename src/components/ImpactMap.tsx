@@ -19,6 +19,7 @@ import { LockIcon } from './icons';
 import type { ImpactLocation } from '../state/simulation';
 import { regionForRadius } from '../lib/geo';
 import { FALLBACK_FRAME_RADIUS_M, RING_STYLE } from './rings';
+import type { StageCircle } from './aftermathLayers';
 import { StrikeAnimation, type StrikeRing } from './StrikeAnimation';
 
 interface Props {
@@ -31,10 +32,14 @@ interface Props {
   /** Called once the rings are on the map after a strike (animated or not). */
   onStrikeEnd?: () => void;
   /**
-   * A Pro ring the user can't use yet (free users' burns ring): drawn faint and
-   * dashed with a "Pro" tag, after the strike animation, never in it.
+   * A Pro ring the user can't use yet (free users' burns ring). Not drawn, so
+   * its size stays hidden; a "Burns zone · Pro" tag sits above the pin instead.
    */
   lockedRing?: Ring | null;
+  /** Aftermath stage layers (fireball, ejecta, fires, dust…), drawn after the strike. */
+  stageCircles?: StageCircle[];
+  /** Hide the damage rings while a stage shows its own layers. */
+  hideRings?: boolean;
   onLockedPress?: () => void;
   /**
    * Play the cinematic version: the camera dives in tilted with the meteor, the
@@ -46,6 +51,7 @@ interface Props {
 }
 
 const EARTH_RADIUS_M = 6.371e6;
+
 
 /** Cinematic timeline, ms. */
 const CINE_FALL = 1500;
@@ -76,6 +82,8 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
     lockedRing,
     onLockedPress,
     cinematic = false,
+    stageCircles,
+    hideRings = false,
     style,
   },
   ref,
@@ -278,6 +286,19 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
         toolbarEnabled={false}
       >
         {!ringsHidden &&
+          growth === null &&
+          stageCircles?.map((c) => (
+            <Circle
+              key={`stage-${c.key}`}
+              center={location}
+              radius={c.radiusM}
+              fillColor={c.fill}
+              strokeColor={c.stroke}
+              strokeWidth={1.5}
+            />
+          ))}
+        {!ringsHidden &&
+          !(hideRings && growth === null) &&
           rings.map((ring) => {
             const s = RING_STYLE[ring.kind];
             const radius = radiusNow(ring.radiusM);
@@ -304,31 +325,20 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
           />
         )}
         {!ringsHidden && growth === null && lockedRing && (
-          <>
-            <Circle
-              center={location}
-              radius={lockedRing.radiusM}
-              fillColor="rgba(224,92,255,0.04)"
-              strokeColor="rgba(224,92,255,0.45)"
-              strokeWidth={1.5}
-              lineDashPattern={[6, 6]}
-            />
-            <Marker
-              // Tag sits on the ring's northern edge.
-              coordinate={{
-                latitude: Math.min(location.latitude + ((lockedRing.radiusM / EARTH_RADIUS_M) * 180) / Math.PI, 85),
-                longitude: location.longitude,
-              }}
-              anchor={{ x: 0.5, y: 0.5 }}
-              onPress={onLockedPress}
-              accessibilityLabel={t('result.burnsTagA11y')}
-            >
-              <View style={styles.tag}>
-                <LockIcon size={10} color={colors.text} />
-                <Text style={styles.tagText}>{t('lock.pro')}</Text>
-              </View>
-            </Marker>
-          </>
+          // No ring for the locked burns zone: drawing it would give its size away.
+          // Just a tag above the pin that opens the paywall.
+          <Marker
+            coordinate={location}
+            anchor={{ x: 0.5, y: 0.5 }}
+            centerOffset={{ x: 0, y: -52 }}
+            onPress={onLockedPress}
+            accessibilityLabel={t('result.burnsTagA11y')}
+          >
+            <View style={styles.tag}>
+              <LockIcon size={10} color={colors.text} />
+              <Text style={styles.tagText}>{t('result.burnsTag')}</Text>
+            </View>
+          </Marker>
         )}
         <Marker coordinate={location} pinColor="#FF6B4A" />
       </MapView>

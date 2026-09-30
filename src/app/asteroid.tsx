@@ -92,13 +92,23 @@ export default function SetAsteroid() {
 
   const energy = result ? formatEnergyMt(result.entryEnergyMt) : null;
 
+  // Strike style. "auto" follows what's available: cinematic when the user may
+  // have it (Pro, the free taste or an ad unlock), otherwise standard.
+  const [stylePick, setStylePick] = useState<'auto' | 'standard' | 'cinematic'>('auto');
+  const cineAccess = upsell.cinematic;
+  const cineLocked = cineAccess === 'locked';
+  const strikeStyle =
+    stylePick === 'auto' ? (cineLocked ? 'standard' : 'cinematic') : stylePick === 'cinematic' && cineLocked ? 'standard' : stylePick;
+  const cineBadge =
+    cineAccess === 'taste' ? t('strike.freeOnce') : cineAccess === 'ticket' ? t('lock.oneTry') : undefined;
+
   async function simulate() {
     const plan = planSimulation(upsell.state, { composition: params.composition, presetId }, isPro);
     if (!plan.ok) {
       upsell.openPaywall(plan.feature, 'locked-simulate', plan.item);
       return;
     }
-    upsell.beginRun(plan);
+    upsell.beginRun(plan, strikeStyle === 'cinematic');
     // A "Remove ads" card from an earlier strike never carries over to this one.
     dismissNudge();
     setSimulating(true);
@@ -123,6 +133,8 @@ export default function SetAsteroid() {
         title={t('asteroid.title')}
         subtitle={location ? t('asteroid.target', { place: location.label }) : t('asteroid.subtitle')}
         onBack={() => router.back()}
+        // Dev builds: hidden test tools (Act as Pro, reset tries).
+        onTitleLongPress={__DEV__ ? () => router.push('/upgrade-stats') : undefined}
       />
 
       <ScrollView contentContainerStyle={styles.body}>
@@ -223,6 +235,31 @@ export default function SetAsteroid() {
           {presetId && (
             <Text style={styles.note}>{t('asteroid.presetAngle', { angle: params.angleDeg })}</Text>
           )}
+        </View>
+
+        <View style={styles.group}>
+          <Text style={styles.label}>{t('strike.label')}</Text>
+          <View style={styles.chips}>
+            <Chip
+              label={t('strike.standard')}
+              selected={strikeStyle === 'standard'}
+              style={styles.flexChip}
+              onPress={() => setStylePick('standard')}
+            />
+            <Chip
+              label={t('strike.cinematic')}
+              selected={strikeStyle === 'cinematic'}
+              locked={cineLocked}
+              badge={cineBadge}
+              style={styles.flexChip}
+              onPress={() =>
+                cineLocked
+                  ? upsell.openPaywall('cinematic', 'cinematic-chip', 'cinematic')
+                  : setStylePick('cinematic')
+              }
+            />
+          </View>
+          <Text style={styles.note}>{t('strike.note')}</Text>
         </View>
 
         {energy && (

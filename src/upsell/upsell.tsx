@@ -17,6 +17,7 @@ import {
   EMPTY_STATE,
   EMPTY_STATS,
   accessFor,
+  cinematicAccess,
   countStat,
   dayKey,
   grantTicket,
@@ -28,6 +29,7 @@ import {
   rewardsLeft,
   spendTicket,
   type Access,
+  type CinematicAccess,
   type Feature,
   type LockedItem,
   type PresetId,
@@ -60,7 +62,8 @@ interface UpsellContext {
   state: UpsellState;
   access: (item: LockedItem) => Access;
   /** Commit a plan from planSimulation() when the user taps Simulate. */
-  beginRun: (plan: Extract<SimulationPlan, { ok: true }>) => void;
+  beginRun: (plan: Extract<SimulationPlan, { ok: true }>, wantCinematic: boolean) => void;
+  cinematic: CinematicAccess;
   run: Run | null;
   /** Spend a ticket on the strike being shown, if there is one. */
   unlockForRun: (item: RunItem) => void;
@@ -71,6 +74,8 @@ interface UpsellContext {
   openPaywall: (feature: Feature, source: UpgradeSource, item?: LockedItem) => void;
   stats: UpgradeStats;
   resetStats: () => void;
+  /** Dev builds: forget free tries, the cinematic taste, tickets and today's ad count. */
+  resetForTesting: () => void;
 }
 
 const Ctx = createContext<UpsellContext | null>(null);
@@ -143,8 +148,8 @@ export function UpsellProvider({ children }: { children: ReactNode }) {
   }, [purchasedAt, bump]);
 
   const beginRun = useCallback<UpsellContext['beginRun']>(
-    (plan) => {
-      const cine = planCinematic(plan.next, isPro);
+    (plan, wantCinematic) => {
+      const cine = planCinematic(plan.next, isPro, wantCinematic);
       update(() => cine.next);
       runId.current += 1;
       setRun({
@@ -189,10 +194,16 @@ export function UpsellProvider({ children }: { children: ReactNode }) {
     AsyncStorage.removeItem(STATS_KEY).catch(() => {});
   }, []);
 
+  const resetForTesting = useCallback(() => {
+    if (!__DEV__) return;
+    update(() => EMPTY_STATE);
+  }, [update]);
+
   const value = useMemo<UpsellContext>(
     () => ({
       state,
       access: (item) => accessFor(state, item, isPro),
+      cinematic: cinematicAccess(state, isPro),
       beginRun,
       run,
       unlockForRun,
@@ -201,8 +212,9 @@ export function UpsellProvider({ children }: { children: ReactNode }) {
       openPaywall,
       stats,
       resetStats,
+      resetForTesting,
     }),
-    [state, isPro, today, beginRun, run, unlockForRun, grant, openPaywall, stats, resetStats],
+    [state, isPro, today, beginRun, run, unlockForRun, grant, openPaywall, stats, resetStats, resetForTesting],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

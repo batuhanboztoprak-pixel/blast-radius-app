@@ -27,6 +27,8 @@ import { PRO_PRODUCT_ID } from '../config';
 import { t } from '../i18n/core';
 
 const STORAGE_KEY = 'blast-radius:pro';
+/** Dev builds only: pretend Pro is owned, for testing Pro features without a purchase. */
+const DEV_PRO_KEY = 'blast-radius:dev-pro';
 
 interface PremiumState {
   /** True once Pro is owned. Starts from the cached value so ads never flash for paying users. */
@@ -41,6 +43,9 @@ interface PremiumState {
   purchasedAt: number | null;
   purchase: () => Promise<void>;
   restore: () => Promise<boolean>;
+  /** Dev builds only: the "Act as Pro" test switch. Always false in release builds. */
+  devPro: boolean;
+  setDevPro: (on: boolean) => void;
 }
 
 const PremiumContext = createContext<PremiumState | null>(null);
@@ -55,6 +60,18 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [purchasedAt, setPurchasedAt] = useState<number | null>(null);
+  const [devPro, setDevProState] = useState(false);
+  useEffect(() => {
+    if (!__DEV__) return;
+    AsyncStorage.getItem(DEV_PRO_KEY)
+      .then((v) => setDevProState(v === '1'))
+      .catch(() => {});
+  }, []);
+  const setDevPro = useCallback((on: boolean) => {
+    if (!__DEV__) return;
+    setDevProState(on);
+    AsyncStorage.setItem(DEV_PRO_KEY, on ? '1' : '0').catch(() => {});
+  }, []);
   const connected = useRef<Promise<unknown> | null>(null);
   /** True between tapping Buy and the store's answer, so launch-time replays aren't counted as new purchases. */
   const buying = useRef(false);
@@ -165,9 +182,21 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     }
   }, [connect, refreshEntitlement]);
 
+  const effectivePro = isPro || (__DEV__ && devPro);
   const value = useMemo(
-    () => ({ isPro, hydrated, price, busy, error, purchasedAt, purchase, restore }),
-    [isPro, hydrated, price, busy, error, purchasedAt, purchase, restore],
+    () => ({
+      isPro: effectivePro,
+      hydrated,
+      price,
+      busy,
+      error,
+      purchasedAt,
+      purchase,
+      restore,
+      devPro: __DEV__ && devPro,
+      setDevPro,
+    }),
+    [effectivePro, hydrated, price, busy, error, purchasedAt, purchase, restore, devPro, setDevPro],
   );
 
   return <PremiumContext.Provider value={value}>{children}</PremiumContext.Provider>;

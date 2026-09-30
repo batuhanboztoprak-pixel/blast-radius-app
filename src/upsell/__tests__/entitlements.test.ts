@@ -2,6 +2,7 @@ import {
   REWARDED_PER_DAY,
   dayKey,
   planCinematic,
+  cinematicAccess,
   recordReward,
   rewardsLeft,
   EMPTY_STATE,
@@ -138,6 +139,17 @@ describe('cinematic strike', () => {
     const plan = planCinematic(withTicket, false);
     expect(plan.cinematic).toBe(true);
     expect(plan.next.tickets).toEqual([]);
+  });
+
+  it('spends nothing when the user picks Standard, and a ticket before the taste', () => {
+    expect(planCinematic(EMPTY_STATE, false, false)).toEqual({ cinematic: false, next: EMPTY_STATE });
+    const plan = planCinematic(grantTicket(EMPTY_STATE, 'cinematic'), false);
+    expect(plan.cinematic).toBe(true);
+    expect(plan.next.tickets).toEqual([]);
+    expect(plan.next.cinematicTasted).toBeUndefined();
+    expect(cinematicAccess(plan.next, false)).toBe('taste');
+    expect(cinematicAccess({ ...EMPTY_STATE, cinematicTasted: true }, false)).toBe('locked');
+    expect(cinematicAccess(EMPTY_STATE, true)).toBe('pro');
   });
 
   it('is always on for Pro and never spends anything', () => {
