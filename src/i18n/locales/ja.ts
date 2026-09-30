@@ -155,6 +155,7 @@ export const ja: Messages = {
     '浅い角度で突入し、上空約30 kmで爆発。衝撃波は広い地域で窓ガラスを割り、約1,500人が負傷しました。この簡易モデルは、これほど高く浅い空中爆発の被害を過小評価します。',
   'preset.chicxulub.name': 'チクシュルーブ',
   'preset.chicxulub.year': '6600万年前',
+  'preset.chicxulub.tag': '🦖 恐竜を絶滅させた',
   'preset.chicxulub.note':
     '恐竜を絶滅させた衝突。約180 kmのクレーターを残し、大量絶滅を引き起こしました。この規模ではリングの大きさは概算で、影響は地球全体に及びました。',
 

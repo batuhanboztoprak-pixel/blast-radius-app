@@ -155,6 +155,7 @@ export const pt: Messages = {
     'Explodiu a ~30 km de altura numa trajetória rasante. A onda de choque quebrou janelas em toda a região e feriu ~1.500 pessoas, mais do que este modelo simplificado prevê para uma explosão tão alta e rasante.',
   'preset.chicxulub.name': 'Chicxulub',
   'preset.chicxulub.year': 'há 66 milhões de anos',
+  'preset.chicxulub.tag': '🦖 Matou os dinossauros',
   'preset.chicxulub.note':
     'O assassino dos dinossauros. Deixou uma cratera de ~180 km e desencadeou uma extinção em massa. Nesta escala os anéis são aproximados: os efeitos foram globais.',
 

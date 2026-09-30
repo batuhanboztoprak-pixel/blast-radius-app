@@ -118,6 +118,7 @@ export function Chip({
   badge,
   a11yLabel,
   icon,
+  tag,
   onPress,
   style,
 }: {
@@ -129,6 +130,8 @@ export function Chip({
   a11yLabel?: string;
   /** Picture before the label (composition icons). */
   icon?: ReactNode;
+  /** Short nickname under the label, e.g. "🦖 Dinosaur killer". */
+  tag?: string;
   onPress: () => void;
   style?: StyleProp<ViewStyle>;
 }) {
@@ -148,7 +151,7 @@ export function Chip({
     >
       {showLock && <LockIcon />}
       {icon}
-      <View style={badge ? styles.chipStack : undefined}>
+      <View style={badge || tag ? styles.chipStack : undefined}>
         <Text
           style={[
             styles.chipLabel,
@@ -158,6 +161,7 @@ export function Chip({
         >
           {label}
         </Text>
+        {tag ? <Text style={styles.chipTag}>{tag}</Text> : null}
         {badge ? <Text style={styles.chipBadge}>{badge}</Text> : null}
       </View>
     </Pressable>
@@ -253,6 +257,7 @@ const styles = StyleSheet.create({
   chipSelected: { backgroundColor: 'rgba(255,107,74,0.12)', borderColor: colors.accent, borderWidth: 1.5 },
   chipLabel: { fontSize: 13, color: colors.muted, fontFamily: fonts.bodySemi },
   chipStack: { alignItems: 'center', paddingVertical: 4 },
+  chipTag: { fontSize: 10, color: colors.accent, fontFamily: fonts.bodySemi, marginTop: 1 },
   chipBadge: { fontSize: 10, color: colors.yellow, fontFamily: fonts.bodySemi, marginTop: 1 },
   chipLabelSelected: { color: colors.accent },
   stat: {

@@ -154,6 +154,7 @@ export const tr: Messages = {
     'Alçak açılı bir yörüngede ~30 km yükseklikte patladı. Şok dalgası bölge genelinde camları kırdı ve ~1.500 kişiyi yaraladı — bu basitleştirilmiş model bu kadar yüksek ve sıyırarak geçen bir patlama için daha azını öngörüyor.',
   'preset.chicxulub.name': 'Chicxulub',
   'preset.chicxulub.year': '66 milyon yıl önce',
+  'preset.chicxulub.tag': '🦖 Dinozor katili',
   'preset.chicxulub.note':
     'Dinozorların sonunu getiren çarpma. ~180 km’lik bir krater bıraktı ve kitlesel yok oluşu başlattı. Bu ölçekte halka boyutları kabadır — etkiler küreseldi.',
 

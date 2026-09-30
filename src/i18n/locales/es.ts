@@ -154,6 +154,7 @@ export const es: Messages = {
     'Estalló a ~30 km de altura en una trayectoria rasante. Su onda expansiva rompió ventanas en toda la región e hirió a ~1500 personas, más de lo que este modelo simplificado predice para una explosión tan alta y rasante.',
   'preset.chicxulub.name': 'Chicxulub',
   'preset.chicxulub.year': 'hace 66 millones de años',
+  'preset.chicxulub.tag': '🦖 Mató a los dinosaurios',
   'preset.chicxulub.note':
     'El asesino de los dinosaurios. Dejó un cráter de ~180 km y desencadenó una extinción masiva. A esta escala los anillos son aproximados: los efectos fueron globales.',
 

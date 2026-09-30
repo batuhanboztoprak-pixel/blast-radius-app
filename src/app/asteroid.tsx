@@ -233,6 +233,7 @@ export default function SetAsteroid() {
                   locked={lock.locked}
                   badge={lock.badge}
                   a11yLabel={lock.a11y}
+                  tag={p.id === 'chicxulub' ? t('preset.chicxulub.tag') : undefined}
                   onPress={() =>
                     lock.locked
                       ? upsell.openPaywall('presets', 'preset-chip', p.id)

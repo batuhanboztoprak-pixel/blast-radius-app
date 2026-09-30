@@ -154,6 +154,7 @@ export const de: Messages = {
     'Zerbarst in ~30 km Höhe auf flacher Bahn. Die Druckwelle zerbrach in der ganzen Region Fenster und verletzte ~1.500 Menschen – mehr, als dieses vereinfachte Modell für eine so hohe, streifende Luftexplosion vorhersagt.',
   'preset.chicxulub.name': 'Chicxulub',
   'preset.chicxulub.year': 'vor 66 Mio. Jahren',
+  'preset.chicxulub.tag': '🦖 Dinosaurier-Killer',
   'preset.chicxulub.note':
     'Der Dinosaurier-Killer. Hinterließ einen ~180 km großen Krater und löste ein Massenaussterben aus. In dieser Größenordnung sind die Ringe grob – die Folgen waren global.',
 

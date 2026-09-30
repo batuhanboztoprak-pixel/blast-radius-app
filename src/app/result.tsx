@@ -196,7 +196,8 @@ export default function Result() {
             // Aftermath stage over the whole map: fires, dark skies, frost.
             <View pointerEvents="none" style={[styles.haze, { backgroundColor: tint.color, opacity: tint.opacity }]} />
           )}
-          {!tint && view === 'map' && strikeDone && globalFraction > 0 && (
+          {!tint && !stageOpen && view === 'map' && strikeDone && globalFraction > 0 && (
+            // (Hidden while an aftermath stage is open, so each stage looks like itself.)
             // Everything beyond the rings is hit too: tint the whole map.
             <View pointerEvents="none" style={[styles.haze, { opacity: 0.12 + 0.2 * globalFraction }]} />
           )}
@@ -334,6 +335,7 @@ export default function Result() {
             <Text style={styles.noteTitle}>
               {preset.name}, {preset.year}
             </Text>
+            {presetId === 'chicxulub' && <Text style={styles.presetTag}>{t('preset.chicxulub.tag')}</Text>}
             <Text style={styles.noteText}>{preset.note}</Text>
           </View>
         )}
@@ -468,6 +470,7 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 4,
   },
+  presetTag: { fontSize: 12, color: colors.accent, fontFamily: fonts.bodySemi },
   noteTitle: { fontSize: 13, color: colors.text, fontFamily: fonts.bodySemi },
   noteText: { fontSize: 13, color: colors.muted, fontFamily: fonts.body, lineHeight: 18 },
   lockedHint: { flexDirection: 'row', alignItems: 'center', gap: 6 },

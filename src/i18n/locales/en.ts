@@ -168,6 +168,7 @@ export const en = {
     'Burst ~30 km up on a shallow path. Its shockwave broke windows across the region and injured ~1,500 people — more than this simplified model predicts for such a high, grazing airburst.',
   'preset.chicxulub.name': 'Chicxulub',
   'preset.chicxulub.year': '66 million years ago',
+  'preset.chicxulub.tag': '🦖 Dinosaur killer',
   'preset.chicxulub.note':
     'The dinosaur killer. Left a ~180 km crater and triggered a mass extinction. Ring sizes at this scale are rough — the effects were global.',
 

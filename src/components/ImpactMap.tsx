@@ -10,7 +10,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import MapView, { Circle, Marker } from 'react-native-maps';
+import MapView, { Circle, Marker, type Region } from 'react-native-maps';
 
 import { t } from '../i18n/core';
 import type { Composition, Ring } from '../physics/impact';
@@ -130,19 +130,41 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
       .then(setStillMotion)
       .catch(() => {});
   }, []);
+  /** The last settled region, for the fallback measurement below. */
+  const lastRegion = useRef<Region | null>(null);
   const measureFrame = async () => {
     const m = map.current;
     if (!m) return;
+    const probeM = 50_000;
+    const cos = Math.max(Math.cos((location.latitude * Math.PI) / 180), 0.01);
+    const dLon = ((probeM / (EARTH_RADIUS_M * cos)) * 180) / Math.PI;
     try {
-      const probeM = 50_000;
-      const cos = Math.max(Math.cos((location.latitude * Math.PI) / 180), 0.01);
-      const dLon = ((probeM / (EARTH_RADIUS_M * cos)) * 180) / Math.PI;
-      const c = await m.pointForCoordinate(location);
-      const p = await m.pointForCoordinate({ latitude: location.latitude, longitude: location.longitude + dLon });
+      // Ask MapKit where the impact is on screen; give up quickly if it doesn't answer.
+      const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 400));
+      const [c, p] = await Promise.race([
+        Promise.all([
+          m.pointForCoordinate(location),
+          m.pointForCoordinate({ latitude: location.latitude, longitude: location.longitude + dLon }),
+        ]),
+        timeout,
+      ]);
       const pxPerM = Math.abs(p.x - c.x) / probeM;
-      if (pxPerM > 0) setEffectFrame({ center: c, pxPerM });
+      if (!(pxPerM > 0) || !Number.isFinite(c.x) || !Number.isFinite(c.y)) throw new Error('no scale');
+      setEffectFrame({ center: c, pxPerM });
     } catch {
-      setEffectFrame(null);
+      // Fall back to Web-Mercator maths on the visible region (the map is top-down here).
+      const r = lastRegion.current ?? region;
+      if (size.width === 0 || !(r.longitudeDelta > 0)) return;
+      const pxPerDeg = size.width / r.longitudeDelta;
+      const mercY = (lat: number) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
+      const pxPerRad = pxPerDeg * (180 / Math.PI);
+      setEffectFrame({
+        center: {
+          x: size.width / 2 + (location.longitude - r.longitude) * pxPerDeg,
+          y: size.height / 2 - (mercY(location.latitude) - mercY(r.latitude)) * pxPerRad,
+        },
+        pxPerM: pxPerDeg / ((EARTH_RADIUS_M * cos * Math.PI) / 180),
+      });
     }
   };
   const effectKey = stageEffect ? `${stageEffect.kind}:${stageEffect.radiusM}` : '';
@@ -324,7 +346,8 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
         onRegionChange={() => {
           if (stageEffect && !moving) setMoving(true);
         }}
-        onRegionChangeComplete={() => {
+        onRegionChangeComplete={(r) => {
+          lastRegion.current = r;
           if (!stageEffect) return;
           setMoving(false);
           measureFrame();

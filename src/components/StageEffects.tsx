@@ -43,30 +43,50 @@ export function StageEffects({ width, height, center, pxPerM, effect, reduceMoti
   const innerPx = effect.innerM ? Math.min(effect.innerM * pxPerM, MAX_PX) : null;
 
   const particles = useMemo<Particle[]>(() => {
-    const count = { fireball: 8, shock: 3, debris: 48, embers: 46, dust: 16, snow: 54 }[effect.kind];
-    // A point spread evenly over a disc (or the whole map when radius is null).
+    const count = { fireball: 0, shock: 0, debris: 70, embers: 60, dust: 22, snow: 60 }[effect.kind];
+    // A point spread evenly over a disc (or the whole map when radius is null),
+    // kept inside the visible map so none are wasted off-screen when the zone is
+    // bigger than the view.
+    const M = 8;
     const place = (i: number, r: number | null) => {
       if (r === null) return { x: rand(i) * width, y: rand(i + 101) * height };
-      const d = Math.sqrt(rand(i)) * r;
-      const a = rand(i + 101) * Math.PI * 2;
-      return { x: center.x + Math.cos(a) * d, y: center.y + Math.sin(a) * d };
+      for (let k = 0; k < 16; k++) {
+        const d = Math.sqrt(rand(i + k * 331)) * r;
+        const a = rand(i + 101 + k * 331) * Math.PI * 2;
+        const x = center.x + Math.cos(a) * d;
+        const y = center.y + Math.sin(a) * d;
+        if (x > M && x < width - M && y > M && y < height - M) return { x, y };
+      }
+      // The disc barely touches the view: scatter over the part of the view it covers.
+      const x0 = Math.max(M, center.x - r);
+      const x1 = Math.min(width - M, center.x + r);
+      const y0 = Math.max(M, center.y - r);
+      const y1 = Math.min(height - M, center.y + r);
+      return { x: x0 + rand(i + 7) * Math.max(x1 - x0, 0), y: y0 + rand(i + 9) * Math.max(y1 - y0, 0) };
     };
     return Array.from({ length: count }, (_, i) => {
       const k = effect.kind;
-      const inner = k === 'debris' && innerPx && i % 5 < 3; // most debris lands near the crater
+      const inner = k === 'debris' && innerPx !== null && innerPx > 6 && i % 5 < 3; // most debris lands near the crater
       const p = place(i + 1, inner ? innerPx : radiusPx);
+      // Bright colours: the map underneath is dark.
       const palette =
         k === 'debris'
-          ? ['#C9A27A', '#8A6A4A', '#5C4633']
+          ? ['#F2D1A8', '#E0A872', '#FFB36B', '#C98B5A']
           : k === 'embers'
             ? ['#FFB347', '#FF6B4A', '#FFD166']
             : k === 'snow'
               ? ['#FFFFFF', '#E6F2FF']
-              : ['rgba(22,24,30,0.7)', 'rgba(40,42,50,0.6)'];
+              : ['rgba(170,155,135,0.42)', 'rgba(130,120,110,0.4)'];
       return {
         ...p,
         size:
-          k === 'dust' ? 50 + rand(i + 7) * 70 : k === 'snow' ? 2 + rand(i + 7) * 3 : 2 + rand(i + 7) * (inner ? 5 : 3),
+          k === 'dust'
+            ? 60 + rand(i + 7) * 90
+            : k === 'snow'
+              ? 3 + rand(i + 7) * 4
+              : k === 'embers'
+                ? 3 + rand(i + 7) * 4
+                : 3 + rand(i + 7) * (inner ? 6 : 4),
         color: palette[i % palette.length],
         delay: rand(i + 13) * (k === 'snow' ? 5000 : 1800),
         duration:
@@ -76,15 +96,18 @@ export function StageEffects({ width, height, center, pxPerM, effect, reduceMoti
     });
   }, [effect.kind, radiusPx, innerPx, width, height, center.x, center.y]);
 
+  // Rings and the fireball never need to be bigger than the view.
+  const diag = Math.hypot(width, height);
+
   return (
     <Animated.View pointerEvents="none" style={StyleSheet.absoluteFill}>
       {effect.kind === 'fireball' && radiusPx !== null && (
-        <Fireball cx={center.x} cy={center.y} r={Math.max(radiusPx, 18)} still={reduceMotion} />
+        <Fireball cx={center.x} cy={center.y} r={Math.min(Math.max(radiusPx, 22), diag)} still={reduceMotion} />
       )}
       {effect.kind === 'shock' &&
         radiusPx !== null &&
         [0, 1, 2].map((i) => (
-          <Pulse key={i} cx={center.x} cy={center.y} r={radiusPx} delay={i * 800} still={reduceMotion} />
+          <Pulse key={i} cx={center.x} cy={center.y} r={Math.min(Math.max(radiusPx, 30), diag)} delay={i * 800} still={reduceMotion} />
         ))}
       {(effect.kind === 'debris' || effect.kind === 'embers' || effect.kind === 'dust' || effect.kind === 'snow') &&
         particles.map((p, i) => <Mote key={i} p={p} kind={effect.kind} height={height} still={reduceMotion} />)}
@@ -147,8 +170,9 @@ function Pulse({ cx, cy, r, delay, still }: { cx: number; cy: number; r: number;
         width: r * 2,
         height: r * 2,
         borderRadius: r,
-        borderWidth: 2,
-        borderColor: 'rgba(255,255,255,0.85)',
+        borderWidth: 3,
+        borderColor: 'rgba(255,236,190,0.95)',
+        backgroundColor: 'rgba(255,209,102,0.08)',
         opacity: v.interpolate({ inputRange: [0, 0.1, 1], outputRange: [0, 0.8, 0] }),
         transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.02, 1] }) }],
       }}
@@ -212,6 +236,12 @@ function Mote({
           height: p.size,
           borderRadius: p.size / 2,
           backgroundColor: p.color,
+        },
+        (kind === 'debris' || kind === 'embers') && {
+          shadowColor: kind === 'embers' ? '#FF6B4A' : '#FFB36B',
+          shadowOpacity: 0.9,
+          shadowRadius: 4,
+          shadowOffset: { width: 0, height: 0 },
         },
         motion,
       ]}

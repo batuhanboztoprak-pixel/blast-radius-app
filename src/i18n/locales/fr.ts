@@ -154,6 +154,7 @@ export const fr: Messages = {
     'A explosé à ~30 km d’altitude sur une trajectoire rasante. L’onde de choc a brisé des vitres dans toute la région et blessé ~1 500 personnes, plus que ce que ce modèle simplifié prévoit pour une explosion aussi haute et rasante.',
   'preset.chicxulub.name': 'Chicxulub',
   'preset.chicxulub.year': 'il y a 66 millions d’années',
+  'preset.chicxulub.tag': '🦖 Tueur de dinosaures',
   'preset.chicxulub.note':
     'Le tueur de dinosaures. Il a laissé un cratère de ~180 km et déclenché une extinction de masse. À cette échelle, les anneaux sont approximatifs : les effets furent mondiaux.',
 
