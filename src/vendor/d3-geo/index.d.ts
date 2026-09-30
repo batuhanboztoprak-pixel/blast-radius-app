@@ -24,6 +24,8 @@ export interface GeoProjection {
 export interface GeoPath {
   (object: GeoGeometry | { type: 'Sphere' }): string | null;
   projection(p: GeoProjection): this;
+  /** Decimal places in the output path string (null = full precision). */
+  digits(d: number | null): this;
 }
 
 export interface GeoCircle {

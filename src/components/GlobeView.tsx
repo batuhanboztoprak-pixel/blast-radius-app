@@ -30,14 +30,31 @@ const DRAG_DEG_PER_PX = 0.35;
  */
 export function GlobeView({ latitude, longitude, rings, size, haze = 0, style }: Props) {
   const [view, setView] = useState({ lat: latitude, lon: longitude });
+  /** While dragging or coasting, draw a lighter globe so it keeps up with the finger. */
+  const [moving, setMoving] = useState(false);
 
   // Gesture bookkeeping lives in a plain object created once, not in refs, so
   // nothing mutable is read during render.
   const [gesture] = useState(() => {
+    const clampLat = (v: number) => Math.max(-89, Math.min(89, v));
     const g = {
       start: { lat: latitude, lon: longitude },
       pending: { lat: latitude, lon: longitude },
       frame: null as number | null,
+      coast: null as number | null,
+    };
+    const push = () => {
+      // At most one re-projection per frame.
+      if (g.frame === null) {
+        g.frame = requestAnimationFrame(() => {
+          g.frame = null;
+          setView(g.pending);
+        });
+      }
+    };
+    const stopCoast = () => {
+      if (g.coast !== null) cancelAnimationFrame(g.coast);
+      g.coast = null;
     };
     const pan = PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -45,35 +62,51 @@ export function GlobeView({ latitude, longitude, rings, size, haze = 0, style }:
       // Keep the gesture away from the parent ScrollView while spinning.
       onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: () => {
+        stopCoast();
         g.start = g.pending;
+        setMoving(true);
       },
       onPanResponderMove: (_, d) => {
-        g.pending = {
-          lat: Math.max(-89, Math.min(89, g.start.lat + d.dy * DRAG_DEG_PER_PX)),
-          lon: g.start.lon - d.dx * DRAG_DEG_PER_PX,
+        g.pending = { lat: clampLat(g.start.lat + d.dy * DRAG_DEG_PER_PX), lon: g.start.lon - d.dx * DRAG_DEG_PER_PX };
+        push();
+      },
+      onPanResponderRelease: (_, d) => {
+        // Keep spinning with the finger's speed, slowing down, then redraw in full detail.
+        let vx = d.vx * 16 * DRAG_DEG_PER_PX; // degrees per frame
+        let vy = d.vy * 16 * DRAG_DEG_PER_PX;
+        const step = () => {
+          vx *= 0.93;
+          vy *= 0.93;
+          if (Math.abs(vx) + Math.abs(vy) < 0.05) {
+            g.coast = null;
+            setMoving(false);
+            return;
+          }
+          g.pending = { lat: clampLat(g.pending.lat + vy), lon: g.pending.lon - vx };
+          setView(g.pending);
+          g.coast = requestAnimationFrame(step);
         };
-        // At most one re-projection per frame.
-        if (g.frame === null) {
-          g.frame = requestAnimationFrame(() => {
-            g.frame = null;
-            setView(g.pending);
-          });
-        }
+        g.coast = requestAnimationFrame(step);
+      },
+      onPanResponderTerminate: () => {
+        stopCoast();
+        setMoving(false);
       },
     });
-    return { g, pan };
+    return { g, pan, stopCoast };
   });
 
   useEffect(
     () => () => {
       if (gesture.g.frame !== null) cancelAnimationFrame(gesture.g.frame);
+      gesture.stopCoast();
     },
     [gesture],
   );
 
   const paths = useMemo(
-    () => globePaths(latitude, longitude, rings, size, view.lat, view.lon),
-    [latitude, longitude, rings, size, view.lat, view.lon],
+    () => globePaths(latitude, longitude, rings, size, view.lat, view.lon, moving ? 'fast' : 'full'),
+    [latitude, longitude, rings, size, view.lat, view.lon, moving],
   );
 
   return (
