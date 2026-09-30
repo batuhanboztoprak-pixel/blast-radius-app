@@ -9,6 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AdsProvider } from '../ads/ads';
 import { PremiumProvider } from '../state/premium';
 import { SimulationProvider } from '../state/simulation';
+import { WorldProvider } from '../state/world';
 import { colors } from '../theme';
 
 export default function RootLayout() {
@@ -27,19 +28,21 @@ export default function RootLayout() {
       <PremiumProvider>
         <AdsProvider>
           <SimulationProvider>
-            <StatusBar style="light" />
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: colors.bg },
-              }}
-            >
-              <Stack.Screen name="index" />
-              <Stack.Screen name="asteroid" />
-              <Stack.Screen name="result" />
-              <Stack.Screen name="share" />
-              <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
-            </Stack>
+            <WorldProvider>
+              <StatusBar style="light" />
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: colors.bg },
+                }}
+              >
+                <Stack.Screen name="index" />
+                <Stack.Screen name="asteroid" />
+                <Stack.Screen name="result" />
+                <Stack.Screen name="share" />
+                <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
+              </Stack>
+            </WorldProvider>
           </SimulationProvider>
         </AdsProvider>
       </PremiumProvider>

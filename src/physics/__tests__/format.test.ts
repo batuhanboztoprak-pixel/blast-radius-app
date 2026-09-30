@@ -1,4 +1,4 @@
-import { formatDistance, formatEnergyMt, formatMultiple, formatYears, sig3 } from '../format';
+import { formatDistance, formatEnergyMt, formatMultiple, formatPeople, formatYears, sig3 } from '../format';
 
 describe('format', () => {
   it('rounds to 3 significant figures with grouping', () => {
@@ -16,5 +16,15 @@ describe('format', () => {
     expect(formatMultiple(411_234)).toBe('411,000×');
     expect(formatMultiple(5e6)).toBe('5 million×');
     expect(formatYears(98_700)).toBe('every ~98,700 years');
+  });
+});
+
+describe('formatPeople', () => {
+  it('rounds to three significant figures with readable units', () => {
+    expect(formatPeople(0)).toBe('0');
+    expect(formatPeople(842)).toBe('842');
+    expect(formatPeople(12_345)).toBe('12,300');
+    expect(formatPeople(3_456_000)).toBe('3.46 million');
+    expect(formatPeople(8.3e9)).toBe('8.3 billion');
   });
 });

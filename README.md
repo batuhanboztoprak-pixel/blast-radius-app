@@ -12,8 +12,8 @@ Built with Expo (SDK 57) + React Native. Maps are Apple MapKit via `react-native
 | Route | File | What it does |
 | --- | --- | --- |
 | `/` | `src/app/index.tsx` | Step 1 — search (Apple geocoder), tap/long-press to drop a pin, or use current location |
-| `/asteroid` | `src/app/asteroid.tsx` | Step 2 — diameter (log slider, 10 m–10 km), composition, entry speed (11–72 km/s), famous-impact presets |
-| `/result` | `src/app/result.tsx` | Step 3 — map with rings, energy, crater width, quake magnitude, damage radii |
+| `/asteroid` | `src/app/asteroid.tsx` | Step 2 — diameter (log slider, 10 m–20 km), composition, entry speed (11–72 km/s, with km/h), famous-impact presets |
+| `/result` | `src/app/result.tsx` | Step 3 — animated strike on the map (replayable), tap-a-ring zoom, globe view for continent-scale impacts, energy, crater, quake, damage radii, people inside each ring, casualties and the running world-population counter |
 | `/share` | `src/app/share.tsx` | Share card: MapKit snapshot + SVG rings captured with `react-native-view-shot` |
 | `/paywall` | `src/app/paywall.tsx` | Pro upsell (modal), restore purchase, ad privacy choices |
 
@@ -33,9 +33,12 @@ Built with Expo (SDK 57) + React Native. Maps are Apple MapKit via `react-native
 src/
   app/            expo-router screens (every file is a route)
   physics/        impact.ts (EIEP equations), presets.ts, format.ts — pure TS, unit-tested
-  state/          simulation.tsx (location + params + memoised result), premium.tsx (StoreKit via expo-iap)
+  population/     grid.ts (offline GPWv4 population lookups), casualties.ts (NASA PAIR + global effects) — unit-tested
+  data/           generated: populationGrid.ts (scripts/build-population.py), land.ts (Natural Earth 110m)
+  vendor/         d3-geo (+3 d3-array helpers), vendored for the globe — see vendor/README.md
+  state/          simulation.tsx (location + params + memoised result), premium.tsx (StoreKit via expo-iap), world.tsx (world-population counter)
   ads/            ads.tsx (UMP consent → ATT → AdMob init, interstitial pacing), AdBanner.tsx
-  components/     ImpactMap, ShareCard, RingLegend, UI primitives, icons
+  components/     ImpactMap, StrikeAnimation, GlobeView (+ globe.ts), PopulationCard, ShareCard, RingLegend, UI primitives, icons
   lib/geo.ts      map framing + Web-Mercator math for the share-card snapshot
 docs/
   PHYSICS.md          equations, constants and known limitations

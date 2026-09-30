@@ -28,7 +28,10 @@ export const PRESETS: Preset[] = [
     id: 'chicxulub',
     name: 'Chicxulub',
     year: '66 Mya',
-    params: { diameterM: 10_000, velocityMs: 20_000, composition: 'rock', angleDeg: 60 },
+    // ~15 km at 20 km/s and 60° reproduces the ~180 km crater. Collins et al. (2020,
+    // Nat. Commun. 11:1480) found the impact came in at 45–60°; estimates of the
+    // impactor's size run from ~10 to 17 km depending on the speed assumed.
+    params: { diameterM: 15_000, velocityMs: 20_000, composition: 'rock', angleDeg: 60 },
     note: 'The dinosaur killer. Left a ~180 km crater and triggered a mass extinction. Ring sizes at this scale are rough — the effects were global.',
   },
 ];

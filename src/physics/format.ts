@@ -27,6 +27,11 @@ export function formatSpeed(ms: number): string {
   return `${Math.round(ms / 1000)} km/s`;
 }
 
+/** 20 km/s → "72,000 km/h" */
+export function formatSpeedKmh(ms: number): string {
+  return `${nf(0).format(Math.round((ms * 3.6) / 1000) * 1000)} km/h`;
+}
+
 /** Energy with a readable unit: kilotons below 1 Mt, million megatons from 1e6 Mt. */
 export function formatEnergyMt(mt: number): { value: string; unit: string } {
   if (mt < 1) return { value: sig3(mt * 1000), unit: 'kilotons' };
@@ -39,6 +44,14 @@ export function formatMultiple(x: number): string {
   if (x >= 1e9) return `${sig3(x / 1e9)} billion×`;
   if (x >= 1e6) return `${sig3(x / 1e6)} million×`;
   return `${sig3(x)}×`;
+}
+
+/** 0 / 840 / 12,300 / 3.45 million / 8.3 billion */
+export function formatPeople(n: number): string {
+  if (!isFinite(n) || n < 0.5) return '0';
+  if (n < 1e6) return nf(0).format(Number(Math.round(n).toPrecision(Math.min(3, String(Math.round(n)).length))));
+  if (n < 1e9) return `${sig3(n / 1e6)} million`;
+  return `${sig3(n / 1e9)} billion`;
 }
 
 export function formatYears(y: number): string {

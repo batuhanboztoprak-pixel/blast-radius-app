@@ -64,13 +64,20 @@ npx eas-cli@latest submit --platform ios
 
 - [ ] Replace `assets/icon.png` and `assets/splash-icon.png`. They're still the Expo template art.
 - [ ] Screenshots: the 4 screens (pick location, set asteroid, result, share card) at 6.9" and 6.5".
-- [ ] Age rating questionnaire: answer "None" throughout. The app simulates impacts without depicting people.
+- [ ] Age rating questionnaire: the app now shows estimated casualty numbers (no imagery of people). "None" still fits most questions, but read the violence items carefully; if in doubt, "Infrequent/Mild Realistic Violence" is the safe answer.
 - [ ] Review notes: "Pro unlock is a non-consumable IAP; use the sandbox account to test. Physics are the published Earth Impact Effects Program equations."
 
 ## 6. Before release: test on device
 
 - [ ] Search, tap-to-drop, and "use my location" all place the pin.
 - [ ] Rings render for a small airburst (e.g. 40 m), a mid-size impact (450 m), and Chicxulub.
+- [ ] Strike animation: the meteor lands exactly on the pin, the expanding rings end at the same size as the map rings (no jump when they swap), the phone buzzes on impact, and **Replay** works after zooming to a ring.
+- [ ] With Settings → Accessibility → Motion → Reduce Motion on, the rings appear without the animation.
+- [ ] Tapping each legend row zooms to that ring; tapping it again frames them all.
+- [ ] A 5 km+ impact switches to the globe after the animation; dragging spins it smoothly (it re-projects ~1,200 land points per frame; if it stutters on older phones, lower `precision` in `globe.ts`).
+- [ ] Map ↔ Globe toggle doesn't replay the animation.
+- [ ] Casualties and "world population left" look sensible (e.g. 150 m over New York → a few million), the counter drops with each strike and survives an app restart, and **Reset Earth** restores 8.3 billion.
+- [ ] First simulation after launch doesn't hitch noticeably (it decodes the 1.8 MB population grid once).
 - [ ] Share card: the map snapshot appears behind the rings, and the share sheet can save the image to Photos.
 - [ ] Banner appears for free users. An interstitial appears on the 3rd simulation and never more often than every 90 s.
 - [ ] Buying Pro removes ads immediately and unlocks iron/comet, the thermal ring and presets.

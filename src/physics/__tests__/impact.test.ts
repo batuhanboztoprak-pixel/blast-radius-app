@@ -56,11 +56,11 @@ describe('simulateImpact', () => {
     expect(r.entryEnergyMt).toBeLessThan(0.8);
   });
 
-  it('makes Chicxulub a ~100+ km complex crater and a magnitude ~10 quake', () => {
+  it('makes Chicxulub a ~180 km complex crater and a magnitude ~10 quake', () => {
     const r = simulateImpact(PRESETS.find((p) => p.id === 'chicxulub')!.params);
     expect(r.craterType).toBe('complex');
-    expect(r.craterDiameterM!).toBeGreaterThan(100_000);
-    expect(r.craterDiameterM!).toBeLessThan(250_000);
+    expect(r.craterDiameterM!).toBeGreaterThan(160_000);
+    expect(r.craterDiameterM!).toBeLessThan(200_000);
     expect(r.seismicMagnitude!).toBeGreaterThan(9);
     expect(r.seismicMagnitude!).toBeLessThan(11);
     expect(r.entryEnergyJ / J_PER_MT).toBeGreaterThan(1e7);

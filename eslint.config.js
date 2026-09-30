@@ -5,6 +5,7 @@ const expoConfig = require('eslint-config-expo/flat');
 module.exports = defineConfig([
   expoConfig,
   {
-    ignores: ['dist/*'],
+    // Vendored d3 code and generated data modules are not ours to lint.
+    ignores: ['dist/*', 'src/vendor/**', 'src/data/**'],
   },
 ]);
