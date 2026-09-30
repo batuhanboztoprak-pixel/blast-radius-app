@@ -8,7 +8,7 @@ import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AdsProvider } from '../ads/ads';
-import { IntroSplash } from '../components/IntroSplash';
+import { INTRO_BG, IntroSplash } from '../components/IntroSplash';
 import { initI18n } from '../i18n/detect';
 import { PremiumProvider } from '../state/premium';
 import { SimulationProvider } from '../state/simulation';
@@ -31,7 +31,8 @@ export default function RootLayout() {
   // The launch intro plays once per launch, over the first screen.
   const [intro, setIntro] = useState(true);
 
-  if (!fontsLoaded && !fontError) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+  // Same colour as the native splash, so there's no dark blink before the intro.
+  if (!fontsLoaded && !fontError) return <View style={{ flex: 1, backgroundColor: INTRO_BG }} />;
 
   return (
     <SafeAreaProvider>

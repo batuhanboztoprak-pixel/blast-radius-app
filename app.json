@@ -12,7 +12,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0B0E17"
+      "backgroundColor": "#2A1FB5"
     },
     "ios": {
       "bundleIdentifier": "com.blastradius.app",
@@ -58,12 +58,17 @@
             ]
           }
         ]
+      },
+      "icon": {
+        "light": "./assets/icon.png",
+        "dark": "./assets/icon-dark.png",
+        "tinted": "./assets/icon-tinted.png"
       }
     },
     "android": {
       "package": "com.blastradius.app",
       "adaptiveIcon": {
-        "backgroundColor": "#0B0E17",
+        "backgroundColor": "#3726D6",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"

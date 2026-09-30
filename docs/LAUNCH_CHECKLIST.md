@@ -84,7 +84,8 @@ release builds.
 - [ ] Chicxulub shows "🦖 Dinosaur killer" under its chip and on the result card.
 - [ ] Famous strikes: tapping the selected preset again deselects it and restores the asteroid you had before.
 - [ ] Rock, iron and comet each have their own icon and description on the asteroid screen and their own meteor in the strike (orange rock, thin white-hot iron with sparks, long blue comet with two tails).
-- [ ] Launch intro: stars, Earth, a meteor hits it, then "BLAST RADIUS". It plays on every cold start, fades out on its own in ~3.5 s, and a tap skips it. With Reduce Motion it shows still for ~1 s.
+- [ ] New app icon on the home screen (also check Settings → Home Screen → Dark and Tinted). Native splash is the icon's meteor on violet, with no dark blink before the intro.
+- [ ] Launch intro (matches the icon): violet sky, the curve of the Earth, the meteor streaks in, flash, the rings spread on the ground, then "BLAST RADIUS". It plays on every cold start, fades out on its own in ~3.5 s, and a tap skips it. With Reduce Motion it shows still for ~1 s.
 - [ ] Rewarded ads: after 3 ad unlocks in a day the paywall hides "Watch a short ad" and says to come back tomorrow; the count resets the next day.
 
 - [ ] Search, tap-to-drop, and "use my location" all place the pin.

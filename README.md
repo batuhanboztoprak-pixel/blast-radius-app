@@ -43,6 +43,7 @@ src/
   upsell/         entitlements.ts (free tries, rewarded unlocks, upgrade-source counters — pure, unit-tested), upsell.tsx (state + AsyncStorage)
   components/     IntroSplash (launch intro), ImpactMap, StrikeAnimation (per-composition looks in CompositionIcon), StageEffects, GlobeView (+ globe.ts), PopulationCard, ShareCard, RingLegend, UI primitives, icons
   lib/geo.ts      map framing + Web-Mercator math for the share-card snapshot
+assets/source/icon.py  generates the app icon, dark/tinted variants and splash mark (SVG; render at 1024×1024)
 docs/
   PHYSICS.md          equations, constants and known limitations
   LOCALIZATION.md     languages, translation files, App Store listings (store/listing.json)
