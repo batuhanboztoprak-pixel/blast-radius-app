@@ -8,11 +8,11 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#0B0E17",
+    "backgroundColor": "#0A0340",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#2A1FB5"
+      "backgroundColor": "#0A0340"
     },
     "ios": {
       "bundleIdentifier": "com.blastradius.app",
@@ -68,7 +68,7 @@
     "android": {
       "package": "com.blastradius.app",
       "adaptiveIcon": {
-        "backgroundColor": "#3726D6",
+        "backgroundColor": "#0A0340",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
