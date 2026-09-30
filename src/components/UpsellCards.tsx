@@ -26,7 +26,8 @@ export function AdNudgeCard({
   onPress,
   onDismiss,
 }: {
-  price: string;
+  /** Store price; null until StoreKit answers (or if the product isn't set up yet). */
+  price: string | null;
   onPress: () => void;
   onDismiss: () => void;
 }) {
@@ -56,7 +57,7 @@ export function AdNudgeCard({
         style={({ pressed }) => [styles.nudgeMain, pressed && { opacity: 0.75 }]}
       >
         <Text style={styles.nudgeText} numberOfLines={2}>
-          {t('nudge.removeAds', { price })}
+          {price ? t('nudge.removeAds', { price }) : t('nudge.removeAdsNoPrice')}
         </Text>
       </Pressable>
       <Pressable

@@ -52,7 +52,7 @@ export default function SetAsteroid() {
   const { params, updateParams, presetId, applyPreset, presetEpoch, result, location } = useSimulation();
   const { isPro } = usePremium();
   const upsell = useUpsell();
-  const { onSimulation } = useAds();
+  const { onSimulation, dismissNudge } = useAds();
   const { recordStrike } = useWorld();
   const { units, setUnits } = useUnits();
   const [simulating, setSimulating] = useState(false);
@@ -99,6 +99,8 @@ export default function SetAsteroid() {
       return;
     }
     upsell.beginRun(plan);
+    // A "Remove ads" card from an earlier strike never carries over to this one.
+    dismissNudge();
     setSimulating(true);
     if (result && location) {
       recordStrike((survivors) =>

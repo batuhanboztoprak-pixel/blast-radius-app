@@ -12,6 +12,11 @@ interface Props {
   longitude: number;
   rings: Ring[];
   size: number;
+  /**
+   * Share of humanity outside the rings killed by global effects (0–1). Tints the
+   * whole planet so it's clear the damage doesn't stop at the rings.
+   */
+  haze?: number;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -23,7 +28,7 @@ const DRAG_DEG_PER_PX = 0.35;
  * flat map distorts. Drag to spin it; rings are true geodesic circles.
  * Give it a `key` of the impact coordinates so it re-centres when they change.
  */
-export function GlobeView({ latitude, longitude, rings, size, style }: Props) {
+export function GlobeView({ latitude, longitude, rings, size, haze = 0, style }: Props) {
   const [view, setView] = useState({ lat: latitude, lon: longitude });
 
   // Gesture bookkeeping lives in a plain object created once, not in refs, so
@@ -88,6 +93,7 @@ export function GlobeView({ latitude, longitude, rings, size, style }: Props) {
         <Path d={paths.sphere} fill="url(#ocean)" />
         <Path d={paths.graticule} stroke="rgba(255,255,255,0.08)" strokeWidth={0.75} fill="none" />
         <Path d={paths.land} fill="#34435F" />
+        {haze > 0 && <Path d={paths.sphere} fill="#8A3414" opacity={0.18 + 0.32 * haze} />}
         {paths.rings.map((r) => (
           <Path
             key={r.kind}

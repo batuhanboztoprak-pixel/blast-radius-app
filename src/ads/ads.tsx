@@ -119,7 +119,8 @@ export function AdsProvider({ children }: { children: ReactNode }) {
   // --- Interstitial ---------------------------------------------------------
   const interstitial = useRef<InterstitialAd | null>(null);
   const loaded = useRef(false);
-  const simulations = useRef(0);
+  /** Simulations since the last interstitial (or since launch). */
+  const sinceLastAd = useRef(0);
   const lastShownAt = useRef(0);
 
   useEffect(() => {
@@ -207,12 +208,16 @@ export function AdsProvider({ children }: { children: ReactNode }) {
   const dismissNudge = useCallback(() => setPostAdNudge(false), []);
 
   const onSimulation = useCallback(async () => {
-    simulations.current += 1;
+    sinceLastAd.current += 1;
     const ad = interstitial.current;
+    // Due from the Nth simulation on. If the ad isn't loaded yet (or the 90 s
+    // gap hasn't passed) it stays due, so the next simulation shows it instead
+    // of skipping a whole cycle.
     const due =
-      simulations.current % INTERSTITIAL_EVERY_N_SIMULATIONS === 0 &&
+      sinceLastAd.current >= INTERSTITIAL_EVERY_N_SIMULATIONS &&
       Date.now() - lastShownAt.current >= INTERSTITIAL_MIN_INTERVAL_MS;
     if (!adsEnabled || !ad || !loaded.current || !due) return;
+    sinceLastAd.current = 0;
 
     const closed = await new Promise<boolean>((resolve) => {
       const done = (wasClosed: boolean) => {

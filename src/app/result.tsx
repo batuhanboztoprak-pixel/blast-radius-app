@@ -1,7 +1,7 @@
 import { Redirect, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AdBanner } from '../ads/AdBanner';
 import { useAds } from '../ads/ads';
@@ -11,7 +11,7 @@ import { ImpactMap } from '../components/ImpactMap';
 import { RingLegend } from '../components/RingLegend';
 import { BackIcon, LockIcon, ShareIcon } from '../components/icons';
 import { visibleRings } from '../components/rings';
-import { IconButton, LockedStatCard, PrimaryButton, SecondaryButton, StatCard } from '../components/ui';
+import { LockedStatCard, PrimaryButton, SecondaryButton, StatCard } from '../components/ui';
 import { AdNudgeCard, FreeTryCard } from '../components/UpsellCards';
 import { PopulationCard } from '../components/PopulationCard';
 import { t } from '../i18n/core';
@@ -43,6 +43,7 @@ export default function Result() {
   const upsell = useUpsell();
   const { run, unlockBurnsForRun } = upsell;
   const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const world = useWorld();
   const { units } = useUnits();
   const [focus, setFocus] = useState<Ring['kind'] | null>(null);
@@ -56,9 +57,6 @@ export default function Result() {
   useEffect(() => {
     if (!isPro && burnsTicket) unlockBurnsForRun();
   }, [isPro, burnsTicket, unlockBurnsForRun]);
-
-  // The "Remove ads" nudge lives only as long as this screen.
-  useEffect(() => dismissNudge, [dismissNudge]);
 
   if (!result || !location) return <Redirect href="/" />;
 
@@ -80,7 +78,10 @@ export default function Result() {
   const freeTry = !isPro && run?.freeTry && run.freeTry === presetId ? run.freeTry : null;
   const largest = result.rings[0]?.radiusM ?? 0;
   const globeAvailable = largest >= GLOBE_AVAILABLE_ABOVE_M;
-  const mapHeight = Math.max(260, height * 0.36);
+  // The map is the show: edge to edge, most of the first screen.
+  const mapHeight = Math.max(380, Math.round(height * 0.62));
+  const globalFraction = world.lastStrike?.impact.globalFraction ?? 0;
+  const strikeDone = playedToken === strikeToken;
   const focusRing = focus ? rings.find((r) => r.kind === focus) : undefined;
   const replay = () => {
     setFocus(null);
@@ -97,20 +98,8 @@ export default function Result() {
   };
 
   return (
-    <SafeAreaView style={styles.screen} edges={['top']}>
-      <View style={styles.header}>
-        <IconButton onPress={() => router.back()} label={t('common.back')}>
-          <BackIcon />
-        </IconButton>
-        <Text style={styles.place} numberOfLines={1}>
-          {location.label}
-        </Text>
-        <IconButton onPress={() => router.push('/share')} label={t('common.share')}>
-          <ShareIcon />
-        </IconButton>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.body}>
+    <SafeAreaView style={styles.screen} edges={[]}>
+      <ScrollView contentContainerStyle={styles.scroll}>
         <View style={[styles.mapWrap, { height: mapHeight }]}>
           {view === 'map' ? (
             <>
@@ -142,12 +131,36 @@ export default function Result() {
                 latitude={location.latitude}
                 longitude={location.longitude}
                 rings={rings}
-                size={Math.min(mapHeight - 24, width - 64)}
+                size={Math.min(mapHeight - insets.top - 110, width - 32)}
+                haze={globalFraction}
               />
               <Text style={styles.globeHint}>{t('result.dragToSpin')}</Text>
             </View>
           )}
-          <View style={styles.mapTools}>
+          {view === 'map' && strikeDone && globalFraction > 0 && (
+            // Everything beyond the rings is hit too: tint the whole map.
+            <View pointerEvents="none" style={[styles.haze, { opacity: 0.12 + 0.2 * globalFraction }]} />
+          )}
+          <View style={[styles.topBar, { top: insets.top + 6 }]}>
+            <Pressable onPress={() => router.back()} style={styles.round} accessibilityRole="button" accessibilityLabel={t('common.back')} hitSlop={6}>
+              <BackIcon color={colors.text} />
+            </Pressable>
+            <View style={styles.placePill}>
+              <Text style={styles.place} numberOfLines={1}>
+                {location.label}
+              </Text>
+            </View>
+            <Pressable onPress={() => router.push('/share')} style={styles.round} accessibilityRole="button" accessibilityLabel={t('common.share')} hitSlop={6}>
+              <ShareIcon color={colors.text} />
+            </Pressable>
+          </View>
+          {strikeDone && globalFraction > 0 && (
+            <View pointerEvents="none" style={[styles.globalBanner, { top: insets.top + 96 }]}>
+              <View style={styles.globalDot} />
+              <Text style={styles.globalText}>{t('result.globalBanner')}</Text>
+            </View>
+          )}
+          <View style={[styles.mapTools, { top: insets.top + 56 }]}>
             <Pressable onPress={replay} style={styles.tool} accessibilityRole="button" accessibilityLabel={t('result.replayA11y')}>
               <Text style={styles.toolText}>{t('result.replay')}</Text>
             </Pressable>
@@ -171,6 +184,7 @@ export default function Result() {
           </View>
         </View>
 
+        <View style={styles.body}>
         <View style={styles.headline}>
           <Text style={styles.kicker}>{t(airburst ? 'result.airburstEnergy' : 'result.energyReleased')}</Text>
           <Text style={styles.energy} adjustsFontSizeToFit numberOfLines={1}>
@@ -262,9 +276,10 @@ export default function Result() {
           </View>
         )}
         <Text style={styles.footnote}>{t('result.footnote', { angle: result.params.angleDeg })}</Text>
+        </View>
       </ScrollView>
 
-      {postAdNudge && price && (
+      {postAdNudge && (
         <AdNudgeCard
           price={price}
           onPress={() => {
@@ -285,25 +300,70 @@ export default function Result() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  header: {
+  scroll: { paddingBottom: 16 },
+  topBar: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 8,
+    gap: 10,
   },
-  place: { flex: 1, fontSize: 13, color: colors.muted, fontFamily: fonts.bodySemi },
-  body: { paddingHorizontal: 20, paddingBottom: 16, gap: 10 },
-  mapWrap: { borderRadius: radius.lg, overflow: 'hidden', backgroundColor: '#0F1424' },
+  round: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(11,14,23,0.82)',
+    borderColor: colors.border,
+    borderWidth: 1,
+  },
+  placePill: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  place: {
+    fontSize: 13,
+    color: colors.text,
+    fontFamily: fonts.bodySemi,
+    backgroundColor: 'rgba(11,14,23,0.82)',
+    borderRadius: 999,
+    overflow: 'hidden',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    maxWidth: '100%',
+  },
+  body: { paddingHorizontal: 20, paddingTop: 6, gap: 10 },
+  mapWrap: {
+    overflow: 'hidden',
+    backgroundColor: '#0F1424',
+    borderBottomLeftRadius: radius.lg,
+    borderBottomRightRadius: radius.lg,
+  },
+  haze: { ...StyleSheet.absoluteFillObject, backgroundColor: '#7A2E12' },
+  globalBanner: {
+    position: 'absolute',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    maxWidth: '88%',
+    backgroundColor: 'rgba(11,14,23,0.88)',
+    borderColor: 'rgba(255,107,74,0.6)',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  globalDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
+  globalText: { fontSize: 12, color: colors.text, fontFamily: fonts.bodySemi, flexShrink: 1 },
   globe: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   globeHint: { position: 'absolute', bottom: 8, fontSize: 10, color: colors.dim, fontFamily: fonts.body },
   mapTools: {
     position: 'absolute',
-    top: 10,
-    left: 10,
-    right: 10,
+    left: 12,
+    right: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
