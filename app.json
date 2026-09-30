@@ -2,6 +2,7 @@
   "expo": {
     "name": "Blast Radius",
     "slug": "blast-radius",
+    "owner": "curfewapps-team",
     "version": "1.0.0",
     "scheme": "blastradius",
     "orientation": "portrait",
