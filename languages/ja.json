@@ -1,0 +1,7 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "Blast Radius",
+    "NSLocationWhenInUseUsageDescription": "位置情報は、現在地ボタンをタップしたときに衝突地点を現在地に置くためだけに使用されます。",
+    "NSUserTrackingUsageDescription": "あなたにより関連性の高い広告を表示するために使用します。Blast Radius Pro では広告が完全になくなります。"
+  }
+}

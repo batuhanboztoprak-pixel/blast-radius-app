@@ -63,7 +63,7 @@ npx eas-cli@latest submit --platform ios
 ```
 
 - [ ] Replace `assets/icon.png` and `assets/splash-icon.png`. They're still the Expo template art.
-- [ ] Screenshots: the 4 screens (pick location, set asteroid, result, share card) at 6.9" and 6.5".
+- [ ] Screenshots: five images at 6.9" and 6.5" with the captions from `store/listing.json` (English and Turkish at least; see docs/LOCALIZATION.md). Paste each language's name, subtitle, keywords and description from the same file.
 - [ ] Age rating questionnaire: the app now shows estimated casualty numbers (no imagery of people). "None" still fits most questions, but read the violence items carefully; if in doubt, "Infrequent/Mild Realistic Violence" is the safe answer.
 - [ ] Review notes: "Pro unlock is a non-consumable IAP; use the sandbox account to test. Physics are the published Earth Impact Effects Program equations."
 
@@ -77,6 +77,8 @@ npx eas-cli@latest submit --platform ios
 - [ ] A 5 km+ impact switches to the globe after the animation; dragging spins it smoothly (it re-projects ~1,200 land points per frame; if it stutters on older phones, lower `precision` in `globe.ts`).
 - [ ] Map ↔ Globe toggle doesn't replay the animation.
 - [ ] Casualties and "world population left" look sensible (e.g. 150 m over New York → a few million), the counter drops with each strike and survives an app restart, and **Reset Earth** restores 8.3 billion.
+- [ ] Languages: switch the iPhone (or Settings → Blast Radius → Language) to Turkish, Japanese and German. Every screen is translated, nothing is cut off (German is longest), Japanese text renders (it falls back to the system font), the location and tracking prompts are translated, and numbers use local separators.
+- [ ] With the region set to United States the app starts in miles; the km/miles switch on the asteroid screen changes every screen and the share card, and survives a restart.
 - [ ] First simulation after launch doesn't hitch noticeably (it decodes the 1.8 MB population grid once).
 - [ ] Share card: the map snapshot appears behind the rings, and the share sheet can save the image to Photos.
 - [ ] Banner appears for free users. An interstitial appears on the 3rd simulation and never more often than every 90 s.

@@ -7,10 +7,15 @@ import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AdsProvider } from '../ads/ads';
+import { initI18n } from '../i18n/detect';
 import { PremiumProvider } from '../state/premium';
 import { SimulationProvider } from '../state/simulation';
+import { UnitsProvider } from '../state/units';
 import { WorldProvider } from '../state/world';
 import { colors } from '../theme';
+
+// Pick the language before anything renders; iOS relaunches the app if it changes.
+initI18n();
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -27,23 +32,25 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <PremiumProvider>
         <AdsProvider>
-          <SimulationProvider>
-            <WorldProvider>
-              <StatusBar style="light" />
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: colors.bg },
-                }}
-              >
-                <Stack.Screen name="index" />
-                <Stack.Screen name="asteroid" />
-                <Stack.Screen name="result" />
-                <Stack.Screen name="share" />
-                <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
-              </Stack>
-            </WorldProvider>
-          </SimulationProvider>
+          <UnitsProvider>
+            <SimulationProvider>
+              <WorldProvider>
+                <StatusBar style="light" />
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: colors.bg },
+                  }}
+                >
+                  <Stack.Screen name="index" />
+                  <Stack.Screen name="asteroid" />
+                  <Stack.Screen name="result" />
+                  <Stack.Screen name="share" />
+                  <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
+                </Stack>
+              </WorldProvider>
+            </SimulationProvider>
+          </UnitsProvider>
         </AdsProvider>
       </PremiumProvider>
     </SafeAreaProvider>

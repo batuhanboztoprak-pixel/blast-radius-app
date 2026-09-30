@@ -4,24 +4,32 @@ import MapView from 'react-native-maps';
 import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { snapshotFrame } from '../lib/geo';
-import { formatDiameter, formatDistance, formatEnergyMt, formatMultiple } from '../physics/format';
+import { t, upper } from '../i18n/core';
+import {
+  formatDiameter,
+  formatDistance,
+  formatEnergyMt,
+  formatMultiple,
+  dec,
+  hiroshimaPercent,
+  type Units,
+} from '../physics/format';
 import type { ImpactResult, Ring } from '../physics/impact';
 import type { ImpactLocation } from '../state/simulation';
 import { colors, fonts } from '../theme';
-import { FALLBACK_FRAME_RADIUS_M, RING_STYLE } from './rings';
+import { FALLBACK_FRAME_RADIUS_M, RING_STYLE, ringLabel } from './rings';
 
 interface Props {
   width: number;
   result: ImpactResult;
   location: ImpactLocation;
   rings: Ring[];
+  units: Units;
   /** Called once the map image is in place and the card is ready to capture. */
   onReady: () => void;
 }
 
 export const CARD_ASPECT = 5 / 4; // height / width — Instagram-feed friendly
-
-const NOUN = { rock: 'ROCK', iron: 'IRON ASTEROID', comet: 'COMET' } as const;
 
 /**
  * The shareable image. The map is rendered once as a MapKit snapshot and the
@@ -29,7 +37,7 @@ const NOUN = { rock: 'ROCK', iron: 'IRON ASTEROID', comet: 'COMET' } as const;
  * of a live Metal-backed map view.
  */
 export const ShareCard = forwardRef<View, Props>(function ShareCard(
-  { width, result, location, rings, onReady },
+  { width, result, location, rings, units, onReady },
   ref,
 ) {
   const height = Math.round(width * CARD_ASPECT);
@@ -71,8 +79,17 @@ export const ShareCard = forwardRef<View, Props>(function ShareCard(
   }
 
   const energy = formatEnergyMt(result.effectiveEnergyMt);
-  const place = location.label.split(',')[0].toUpperCase();
-  const kicker = `IF A ${formatDiameter(result.params.diameterM).toUpperCase()} ${NOUN[result.params.composition]} HIT ${place}`;
+  const kicker = upper(
+    t('share.kicker', {
+      size: formatDiameter(result.params.diameterM, units),
+      object: t(`share.object.${result.params.composition}`),
+      place: location.label.split(',')[0],
+    }),
+  );
+  const hiroshima =
+    result.hiroshimaMultiple < 1
+      ? t('share.hiroshimaPercent', { pct: hiroshimaPercent(result.hiroshimaMultiple) })
+      : t('share.hiroshimaTimes', { x: formatMultiple(result.hiroshimaMultiple) });
 
   return (
     <View ref={ref} collapsable={false} style={{ width, height, backgroundColor: colors.bg }}>
@@ -133,7 +150,7 @@ export const ShareCard = forwardRef<View, Props>(function ShareCard(
         </Text>
         <Text style={[styles.headline, { fontSize: width * 0.075 }]} numberOfLines={2} adjustsFontSizeToFit>
           {energy.value} {energy.unit} —{'\n'}
-          {formatMultiple(result.hiroshimaMultiple)} Hiroshima
+          {hiroshima}
         </Text>
       </View>
 
@@ -142,20 +159,20 @@ export const ShareCard = forwardRef<View, Props>(function ShareCard(
           <View key={r.kind} style={styles.legendItem}>
             <View style={[styles.dot, { backgroundColor: RING_STYLE[r.kind].color }]} />
             <Text style={styles.legendText}>
-              {RING_STYLE[r.kind].label} {r.capped ? '>' : ''}
-              {formatDistance(r.kind === 'crater' ? r.radiusM * 2 : r.radiusM)}
+              {ringLabel(r.kind)} {r.capped ? '>' : ''}
+              {formatDistance(r.kind === 'crater' ? r.radiusM * 2 : r.radiusM, units)}
             </Text>
           </View>
         ))}
         {result.airburstAltitudeM !== null && rings.length === 0 && (
-          <Text style={styles.legendText}>Airburst — no crater, little damage on the ground</Text>
+          <Text style={styles.legendText}>{t('share.airburst')}</Text>
         )}
       </View>
 
       <View style={{ flex: 1 }} />
       <View style={[styles.footer, { paddingHorizontal: pad, paddingBottom: pad * 0.8 }]}>
-        <Text style={styles.footerText}>Simulated with Blast Radius</Text>
-        <Text style={styles.footerText}>{result.seismicMagnitude !== null ? `M${result.seismicMagnitude.toFixed(1)} quake` : ''}</Text>
+        <Text style={styles.footerText}>{t('share.footer')}</Text>
+        <Text style={styles.footerText}>{result.seismicMagnitude !== null ? t('share.quake', { m: dec(result.seismicMagnitude, 1) }) : ''}</Text>
       </View>
     </View>
   );

@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AdBanner } from '../ads/AdBanner';
 import { LocateIcon, SearchIcon } from '../components/icons';
 import { IconButton, PrimaryButton, StepHeader } from '../components/ui';
+import { t } from '../i18n/core';
 import { formatCoords } from '../lib/geo';
 import { useSimulation, type ImpactLocation } from '../state/simulation';
 import { colors, fonts, radius } from '../theme';
@@ -63,7 +64,7 @@ export default function PickLocation() {
     try {
       const [hit] = await Location.geocodeAsync(q);
       if (!hit) {
-        setSearchError(`No place found for “${q}”.`);
+        setSearchError(t('pick.noResult', { query: q }));
         return;
       }
       const [address] = await Location.reverseGeocodeAsync(hit).catch(() => []);
@@ -73,7 +74,7 @@ export default function PickLocation() {
         500,
       );
     } catch {
-      setSearchError('Search is unavailable right now. Tap the map instead.');
+      setSearchError(t('pick.searchUnavailable'));
     } finally {
       setSearching(false);
     }
@@ -84,7 +85,7 @@ export default function PickLocation() {
     try {
       const perm = await Location.requestForegroundPermissionsAsync();
       if (!perm.granted) {
-        setSearchError('Location access is off. Search or tap the map instead.');
+        setSearchError(t('pick.locationOff'));
         return;
       }
       const { coords } = await Location.getCurrentPositionAsync({
@@ -96,16 +97,16 @@ export default function PickLocation() {
         500,
       );
     } catch {
-      setSearchError('Could not find your location. Search or tap the map instead.');
+      setSearchError(t('pick.locationFailed'));
     }
   }
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <StepHeader
-        step="STEP 1 OF 3"
-        title="Where should it hit?"
-        subtitle="Tap anywhere on the map or search a city."
+        step={t('pick.step')}
+        title={t('pick.title')}
+        subtitle={t('pick.subtitle')}
       />
 
       <View style={styles.searchWrap}>
@@ -115,12 +116,12 @@ export default function PickLocation() {
             value={query}
             onChangeText={setQuery}
             onSubmitEditing={search}
-            placeholder="Search a city or address"
+            placeholder={t('pick.searchPlaceholder')}
             placeholderTextColor={colors.dim}
             returnKeyType="search"
             autoCorrect={false}
             style={styles.searchInput}
-            accessibilityLabel="Search a city or address"
+            accessibilityLabel={t('pick.searchPlaceholder')}
           />
           {searching && <ActivityIndicator color={colors.muted} />}
         </View>
@@ -159,7 +160,7 @@ export default function PickLocation() {
           </View>
         )}
         <View style={styles.locate}>
-          <IconButton onPress={locateMe} label="Use my location">
+          <IconButton onPress={locateMe} label={t('pick.useMyLocation')}>
             <LocateIcon />
           </IconButton>
         </View>
@@ -167,7 +168,7 @@ export default function PickLocation() {
 
       <View style={styles.footer}>
         <PrimaryButton
-          label={location ? 'Continue' : 'Drop a pin to continue'}
+          label={t(location ? 'pick.continue' : 'pick.dropPin')}
           disabled={!location}
           onPress={() => router.push('/asteroid')}
         />

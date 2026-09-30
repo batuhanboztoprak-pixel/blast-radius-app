@@ -1,9 +1,32 @@
+/**
+ * Number and unit formatting in the user's language and preferred units.
+ * Language and number locale come from ../i18n/core (set once at startup);
+ * units are passed in because the user can switch them in the app.
+ */
+import { getLanguage, getNumberLocale, t } from '../i18n/core';
 import type { Composition } from './impact';
 
-const nf = (digits: number) =>
-  new Intl.NumberFormat('en-US', { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+export type Units = 'metric' | 'imperial';
 
-/** 3 significant figures, grouped: 12,400 / 3.72 / 0.0451 */
+const M_PER_MI = 1609.344;
+const M_PER_FT = 0.3048;
+
+const formatters = new Map<string, Intl.NumberFormat>();
+function nf(digits: number): Intl.NumberFormat {
+  const key = `${getNumberLocale()}|${digits}`;
+  let f = formatters.get(key);
+  if (!f) {
+    try {
+      f = new Intl.NumberFormat(getNumberLocale(), { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+    } catch {
+      f = new Intl.NumberFormat('en-US', { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+    }
+    formatters.set(key, f);
+  }
+  return f;
+}
+
+/** 3 significant figures, grouped for the locale: 12,400 / 3.72 / 0.0451 (en) · 12.400 / 3,72 (de) */
 export function sig3(n: number): string {
   if (!isFinite(n)) return '—';
   if (n === 0) return '0';
@@ -13,56 +36,112 @@ export function sig3(n: number): string {
   return nf(digits).format(Number(n.toPrecision(3)));
 }
 
-export function formatDistance(m: number): string {
+/** Fixed decimals with the locale's separator: 7.2 → "7,2" in German. */
+export function dec(n: number, digits: number): string {
+  try {
+    return new Intl.NumberFormat(getNumberLocale(), {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    }).format(n);
+  } catch {
+    return n.toFixed(digits);
+  }
+}
+
+/** Whole number with locale grouping. */
+export function int(n: number): string {
+  return nf(0).format(Math.round(n));
+}
+
+/**
+ * Large numbers in words, 3 significant figures: "3.46 million", "8.3 billion"
+ * (or 346万 / 83億 in Japanese). Below a million it's just a grouped number.
+ */
+export function formatLarge(n: number): string {
+  if (!isFinite(n)) return '—';
+  if (getLanguage() === 'ja') {
+    if (n >= 1e8) return `${sig3(n / 1e8)}億`;
+    if (n >= 1e4) return `${sig3(n / 1e4)}万`;
+    return sig3(n);
+  }
+  if (n >= 1e9) return t('num.billion', { n: sig3(n / 1e9) });
+  if (n >= 1e6) return t('num.million', { n: sig3(n / 1e6) });
+  return sig3(n);
+}
+
+export function formatDistance(m: number, units: Units = 'metric'): string {
+  if (units === 'imperial') {
+    const mi = m / M_PER_MI;
+    if (mi < 0.1) return `${sig3(m / M_PER_FT)} ft`;
+    return `${sig3(mi)} mi`;
+  }
   if (m < 1000) return `${sig3(m)} m`;
   return `${sig3(m / 1000)} km`;
 }
 
-export function formatDiameter(m: number): string {
-  if (m < 1000) return `${Math.round(m)} m`;
+export function formatDiameter(m: number, units: Units = 'metric'): string {
+  if (units === 'imperial') {
+    if (m < M_PER_MI) return `${int(m / M_PER_FT)} ft`;
+    return `${sig3(m / M_PER_MI)} mi`;
+  }
+  if (m < 1000) return `${int(m)} m`;
   return `${sig3(m / 1000)} km`;
 }
 
-export function formatSpeed(ms: number): string {
+/** 20 km/s · 12.4 mi/s */
+export function formatSpeed(ms: number, units: Units = 'metric'): string {
+  if (units === 'imperial') return `${sig3(ms / M_PER_MI)} mi/s`;
   return `${Math.round(ms / 1000)} km/s`;
 }
 
-/** 20 km/s → "72,000 km/h" */
-export function formatSpeedKmh(ms: number): string {
-  return `${nf(0).format(Math.round((ms * 3.6) / 1000) * 1000)} km/h`;
+/** 20 km/s → "72,000 km/h" · "44,700 mph" */
+export function formatSpeedPerHour(ms: number, units: Units = 'metric'): string {
+  if (units === 'imperial') return `${int(Math.round((ms * 3600) / M_PER_MI / 100) * 100)} mph`;
+  return `${int(Math.round((ms * 3.6) / 1000) * 1000)} km/h`;
 }
 
-/** Energy with a readable unit: kilotons below 1 Mt, million megatons from 1e6 Mt. */
+/** Energy with a readable unit: kilotons below 1 Mt, "million megatons" from 1e6 Mt. */
 export function formatEnergyMt(mt: number): { value: string; unit: string } {
-  if (mt < 1) return { value: sig3(mt * 1000), unit: 'kilotons' };
-  if (mt >= 1e6) return { value: sig3(mt / 1e6), unit: 'million megatons' };
-  return { value: sig3(mt), unit: 'megatons' };
+  if (mt < 1) return { value: sig3(mt * 1000), unit: t('energy.kilotons') };
+  if (mt >= 1e6) {
+    if (getLanguage() === 'ja') {
+      // 7.5×10⁷ Mt → 7500万メガトン
+      const [div, word] = mt >= 1e8 ? [1e8, '億'] : [1e4, '万'];
+      return { value: sig3(mt / div), unit: `${word}${t('energy.megatons')}` };
+    }
+    return { value: sig3(mt / 1e6), unit: t('energy.millionMegatons') };
+  }
+  return { value: sig3(mt), unit: t('energy.megatons') };
 }
 
+/**
+ * How many Hiroshima bombs, as a number without the "×": "411,000", "5 million".
+ * Below one bomb, use hiroshimaPercent instead.
+ */
 export function formatMultiple(x: number): string {
-  if (x < 1) return `${sig3(x * 100)}% of`;
-  if (x >= 1e9) return `${sig3(x / 1e9)} billion×`;
-  if (x >= 1e6) return `${sig3(x / 1e6)} million×`;
-  return `${sig3(x)}×`;
+  return x >= 1e6 ? formatLarge(x) : sig3(x);
 }
 
-/** 0 / 840 / 12,300 / 3.45 million / 8.3 billion */
+export function hiroshimaPercent(x: number): string {
+  return sig3(x * 100);
+}
+
+/** 0 / 842 / 12,300 / 3.46 million / 8.3 billion */
 export function formatPeople(n: number): string {
   if (!isFinite(n) || n < 0.5) return '0';
-  if (n < 1e6) return nf(0).format(Number(Math.round(n).toPrecision(Math.min(3, String(Math.round(n)).length))));
-  if (n < 1e9) return `${sig3(n / 1e6)} million`;
-  return `${sig3(n / 1e9)} billion`;
+  if (n < 1e6 && getLanguage() !== 'ja') {
+    const r = Math.round(n);
+    return int(Number(r.toPrecision(Math.min(3, String(r).length))));
+  }
+  if (getLanguage() === 'ja' && n < 1e4) return int(Number(Math.round(n).toPrecision(3)));
+  return formatLarge(n);
 }
 
 export function formatYears(y: number): string {
-  if (y < 1) return 'several times a year';
-  if (y < 1e6) return `every ~${sig3(y)} years`;
-  if (y < 1e9) return `every ~${sig3(y / 1e6)} million years`;
-  return `every ~${sig3(y / 1e9)} billion years`;
+  if (y < 1) return t('years.severalPerYear');
+  return t('years.every', { n: formatLarge(y) });
 }
 
-export const COMPOSITION_LABEL: Record<Composition, string> = {
-  rock: 'Rock',
-  iron: 'Iron',
-  comet: 'Comet',
-};
+export function compositionLabel(c: Composition): string {
+  return t(`composition.${c}`);
+}

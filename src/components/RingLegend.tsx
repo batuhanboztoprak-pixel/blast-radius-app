@@ -1,9 +1,10 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { t } from '../i18n/core';
 import type { Ring } from '../physics/impact';
 import { colors, fonts } from '../theme';
 import { LockIcon } from './icons';
-import { RING_STYLE } from './rings';
+import { RING_STYLE, ringLabel } from './rings';
 
 interface Props {
   rings: Ring[];
@@ -29,30 +30,30 @@ export function RingLegend({ rings, selected = null, onSelect, onLockedThermal }
             disabled={!onSelect}
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
-            accessibilityLabel={`${RING_STYLE[r.kind].label}. ${active ? 'Show all rings' : 'Zoom to this ring'}`}
+            accessibilityLabel={t(active ? 'legend.showAllA11y' : 'legend.zoomA11y', { ring: ringLabel(r.kind) })}
             hitSlop={6}
             style={[styles.row, active && styles.active]}
           >
             <View style={[styles.dot, { backgroundColor: RING_STYLE[r.kind].color }]} />
             <Text style={[styles.text, active && { color: RING_STYLE[r.kind].color }]}>
-              {RING_STYLE[r.kind].label}
+              {ringLabel(r.kind)}
             </Text>
           </Pressable>
         );
       })}
       {onSelect && rings.length > 1 && (
-        <Text style={styles.tip}>{selected ? 'Tap again to see all' : 'Tap a ring to zoom'}</Text>
+        <Text style={styles.tip}>{t(selected ? 'legend.tapAgain' : 'legend.tapToZoom')}</Text>
       )}
       {onLockedThermal && (
         <Pressable
           onPress={onLockedThermal}
           accessibilityRole="button"
-          accessibilityLabel="Thermal burns ring, requires Pro"
+          accessibilityLabel={t('legend.thermalLockedA11y')}
           style={styles.row}
           hitSlop={8}
         >
           <LockIcon size={10} color={colors.muted} />
-          <Text style={[styles.text, { color: colors.muted }]}>{RING_STYLE.thermal.label}</Text>
+          <Text style={[styles.text, { color: colors.muted }]}>{ringLabel('thermal')}</Text>
         </Pressable>
       )}
     </View>

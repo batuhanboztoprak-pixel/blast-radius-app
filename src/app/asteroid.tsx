@@ -8,13 +8,22 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AdBanner } from '../ads/AdBanner';
 import { useAds } from '../ads/ads';
 import { Chip, PrimaryButton, StepHeader } from '../components/ui';
-import { COMPOSITION_LABEL, formatDiameter, formatEnergyMt, formatSpeed, formatSpeedKmh } from '../physics/format';
+import { t } from '../i18n/core';
+import {
+  compositionLabel,
+  formatDiameter,
+  formatEnergyMt,
+  formatSpeed,
+  formatSpeedPerHour,
+  type Units,
+} from '../physics/format';
 import type { Composition } from '../physics/impact';
-import { PRESETS } from '../physics/presets';
+import { PRESETS, presetText } from '../physics/presets';
 import { populationImpact } from '../population/casualties';
 import { peopleWithin2015 } from '../population/grid';
 import { usePremium } from '../state/premium';
 import { useSimulation } from '../state/simulation';
+import { useUnits } from '../state/units';
 import { useWorld } from '../state/world';
 import { colors, fonts } from '../theme';
 
@@ -42,6 +51,7 @@ export default function SetAsteroid() {
   const { isPro } = usePremium();
   const { onSimulation } = useAds();
   const { recordStrike } = useWorld();
+  const { units, setUnits } = useUnits();
   const [simulating, setSimulating] = useState(false);
   // Slider thumbs stay uncontrolled while dragging; bump the key to move them programmatically.
   const [sliderKey, setSliderKey] = useState(0);
@@ -75,17 +85,17 @@ export default function SetAsteroid() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <StepHeader
-        step="STEP 2 OF 3"
-        title="Set the asteroid"
-        subtitle={location ? `Target: ${location.label}` : 'Size and speed decide how bad it gets.'}
+        step={t('asteroid.step')}
+        title={t('asteroid.title')}
+        subtitle={location ? t('asteroid.target', { place: location.label }) : t('asteroid.subtitle')}
         onBack={() => router.back()}
       />
 
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.group}>
           <View style={styles.row}>
-            <Text style={styles.label}>Diameter</Text>
-            <Text style={[styles.value, { color: colors.accent }]}>{formatDiameter(params.diameterM)}</Text>
+            <Text style={styles.label}>{t('asteroid.diameter')}</Text>
+            <Text style={[styles.value, { color: colors.accent }]}>{formatDiameter(params.diameterM, units)}</Text>
           </View>
           <Slider
             key={`d${sliderKey}`}
@@ -96,23 +106,23 @@ export default function SetAsteroid() {
             minimumTrackTintColor={colors.accent}
             maximumTrackTintColor={colors.border}
             thumbTintColor={colors.text}
-            accessibilityLabel="Asteroid diameter"
+            accessibilityLabel={t('asteroid.diameterA11y')}
           />
           <View style={styles.row}>
-            <Text style={styles.range}>10 m</Text>
-            <Text style={styles.range}>20 km</Text>
+            <Text style={styles.range}>{formatDiameter(MIN_DIAMETER, units)}</Text>
+            <Text style={styles.range}>{formatDiameter(MAX_DIAMETER, units)}</Text>
           </View>
         </View>
 
         <View style={styles.group}>
-          <Text style={styles.label}>Composition</Text>
+          <Text style={styles.label}>{t('asteroid.composition')}</Text>
           <View style={styles.chips}>
             {COMPOSITIONS.map((c) => {
               const locked = !isPro && c !== 'rock';
               return (
                 <Chip
                   key={c}
-                  label={COMPOSITION_LABEL[c]}
+                  label={compositionLabel(c)}
                   selected={params.composition === c}
                   locked={locked}
                   style={styles.flexChip}
@@ -127,10 +137,10 @@ export default function SetAsteroid() {
 
         <View style={styles.group}>
           <View style={styles.row}>
-            <Text style={styles.label}>Entry speed</Text>
-            <Text style={[styles.value, { color: colors.blue }]}>{formatSpeed(params.velocityMs)}</Text>
+            <Text style={styles.label}>{t('asteroid.speed')}</Text>
+            <Text style={[styles.value, { color: colors.blue }]}>{formatSpeed(params.velocityMs, units)}</Text>
           </View>
-          <Text style={styles.subValue}>{formatSpeedKmh(params.velocityMs)}</Text>
+          <Text style={styles.subValue}>{formatSpeedPerHour(params.velocityMs, units)}</Text>
           <Slider
             key={`v${sliderKey}`}
             value={params.velocityMs / 1000}
@@ -141,25 +151,22 @@ export default function SetAsteroid() {
             minimumTrackTintColor={colors.blue}
             maximumTrackTintColor={colors.border}
             thumbTintColor={colors.text}
-            accessibilityLabel="Entry speed"
+            accessibilityLabel={t('asteroid.speedA11y')}
           />
           <View style={styles.row}>
-            <Text style={styles.range}>{MIN_SPEED_KMS} km/s</Text>
-            <Text style={styles.range}>{MAX_SPEED_KMS} km/s</Text>
+            <Text style={styles.range}>{formatSpeed(MIN_SPEED_KMS * 1000, units)}</Text>
+            <Text style={styles.range}>{formatSpeed(MAX_SPEED_KMS * 1000, units)}</Text>
           </View>
-          <Text style={styles.note}>
-            Every real asteroid or comet hits in this range: 11 km/s is Earth&apos;s escape speed,
-            72 km/s a comet meeting Earth head-on. Typical asteroids arrive at 17–20 km/s.
-          </Text>
+          <Text style={styles.note}>{t('asteroid.speedNote')}</Text>
         </View>
 
         <View style={styles.group}>
-          <Text style={styles.label}>Famous impacts</Text>
+          <Text style={styles.label}>{t('asteroid.presets')}</Text>
           <View style={styles.chips}>
             {PRESETS.map((p) => (
               <Chip
                 key={p.id}
-                label={p.name}
+                label={presetText(p.id).name}
                 selected={presetId === p.id}
                 locked={!isPro}
                 onPress={() => {
@@ -171,21 +178,28 @@ export default function SetAsteroid() {
             ))}
           </View>
           {presetId && (
-            <Text style={styles.note}>
-              {params.angleDeg}° entry angle, as reconstructed for the real event.
-            </Text>
+            <Text style={styles.note}>{t('asteroid.presetAngle', { angle: params.angleDeg })}</Text>
           )}
         </View>
 
         {energy && (
           <Text style={styles.preview}>
-            ≈ {energy.value} {energy.unit} of TNT
+            {t('asteroid.energyPreview', { value: energy.value, unit: energy.unit })}
           </Text>
         )}
+
+        <View style={[styles.row, styles.unitsRow]}>
+          <Text style={styles.label}>{t('units.label')}</Text>
+          <View style={styles.chips} accessibilityLabel={t('units.a11y')}>
+            {(['metric', 'imperial'] as Units[]).map((u) => (
+              <Chip key={u} label={t(`units.${u}`)} selected={units === u} onPress={() => setUnits(u)} />
+            ))}
+          </View>
+        </View>
       </ScrollView>
 
       <View style={styles.footer}>
-        <PrimaryButton label="Simulate impact" onPress={simulate} loading={simulating} />
+        <PrimaryButton label={t('asteroid.simulate')} onPress={simulate} loading={simulating} />
       </View>
       <AdBanner />
     </SafeAreaView>
@@ -204,6 +218,7 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   flexChip: { flexGrow: 1, flexBasis: 0 },
   note: { fontSize: 12, color: colors.muted, fontFamily: fonts.body },
+  unitsRow: { alignItems: 'center' },
   preview: { fontSize: 13, color: colors.muted, fontFamily: fonts.bodyMedium, textAlign: 'center' },
   footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16 },
 });

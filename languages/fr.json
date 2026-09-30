@@ -1,0 +1,7 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "Blast Radius",
+    "NSLocationWhenInUseUsageDescription": "Votre position n’est utilisée que lorsque vous touchez le bouton de localisation, pour placer l’impact là où vous êtes.",
+    "NSUserTrackingUsageDescription": "Cela nous permet de vous montrer des publicités plus pertinentes. Blast Radius Pro supprime entièrement la publicité."
+  }
+}

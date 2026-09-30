@@ -12,18 +12,21 @@ import { BackIcon, LockIcon, ShareIcon } from '../components/icons';
 import { visibleRings } from '../components/rings';
 import { IconButton, PrimaryButton, SecondaryButton, StatCard } from '../components/ui';
 import { PopulationCard } from '../components/PopulationCard';
+import { t } from '../i18n/core';
 import {
+  dec,
   formatDistance,
   formatEnergyMt,
   formatMultiple,
   formatPeople,
   formatYears,
-  sig3,
+  hiroshimaPercent,
 } from '../physics/format';
 import type { Ring } from '../physics/impact';
-import { PRESETS } from '../physics/presets';
+import { presetText } from '../physics/presets';
 import { usePremium } from '../state/premium';
 import { useSimulation } from '../state/simulation';
+import { useUnits } from '../state/units';
 import { useWorld } from '../state/world';
 import { colors, fonts, radius } from '../theme';
 
@@ -34,6 +37,7 @@ export default function Result() {
   const { isPro } = usePremium();
   const { width, height } = useWindowDimensions();
   const world = useWorld();
+  const { units } = useUnits();
   const [focus, setFocus] = useState<Ring['kind'] | null>(null);
   // Play the strike when the screen opens; Replay bumps it.
   const [strikeToken, setStrikeToken] = useState(1);
@@ -44,12 +48,15 @@ export default function Result() {
 
   const rings = visibleRings(result.rings, isPro);
   const energy = formatEnergyMt(result.effectiveEnergyMt);
-  const multiple = formatMultiple(result.hiroshimaMultiple);
+  const hiroshima =
+    result.hiroshimaMultiple < 1
+      ? t('result.hiroshimaPercent', { pct: hiroshimaPercent(result.hiroshimaMultiple) })
+      : t('result.hiroshimaTimes', { x: formatMultiple(result.hiroshimaMultiple) });
   const airburst = result.airburstAltitudeM !== null;
   const severe = ringRadius(result.rings, 'severe');
   const windows = ringRadius(result.rings, 'windows');
   const thermal = ringRadius(result.rings, 'thermal');
-  const preset = PRESETS.find((p) => p.id === presetId);
+  const preset = presetId ? presetText(presetId) : null;
   const openPaywall = () => router.push('/paywall');
   const largest = result.rings[0]?.radiusM ?? 0;
   const globeAvailable = largest >= GLOBE_AVAILABLE_ABOVE_M;
@@ -62,23 +69,23 @@ export default function Result() {
   };
 
   const distanceText = (r: Ring | undefined) =>
-    r ? `${r.capped ? '>' : ''}${formatDistance(r.radiusM)}` : 'None';
+    r ? `${r.capped ? '>' : ''}${formatDistance(r.radiusM, units)}` : t('common.none');
   const inRing = world.lastStrike?.impact.inRing ?? {};
   const ringHint = (r: Ring | undefined, what: string) => {
     const n = r ? inRing[r.kind] : undefined;
-    return n !== undefined ? `radius · ${formatPeople(n)} people inside` : what;
+    return n !== undefined ? t('result.peopleInside', { n: formatPeople(n) }) : what;
   };
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
-        <IconButton onPress={() => router.back()} label="Back">
+        <IconButton onPress={() => router.back()} label={t('common.back')}>
           <BackIcon />
         </IconButton>
         <Text style={styles.place} numberOfLines={1}>
           {location.label}
         </Text>
-        <IconButton onPress={() => router.push('/share')} label="Share">
+        <IconButton onPress={() => router.push('/share')} label={t('common.share')}>
           <ShareIcon />
         </IconButton>
       </View>
@@ -115,12 +122,12 @@ export default function Result() {
                 rings={rings}
                 size={Math.min(mapHeight - 24, width - 64)}
               />
-              <Text style={styles.globeHint}>Drag to spin</Text>
+              <Text style={styles.globeHint}>{t('result.dragToSpin')}</Text>
             </View>
           )}
           <View style={styles.mapTools}>
-            <Pressable onPress={replay} style={styles.tool} accessibilityRole="button" accessibilityLabel="Replay impact">
-              <Text style={styles.toolText}>↻ Replay</Text>
+            <Pressable onPress={replay} style={styles.tool} accessibilityRole="button" accessibilityLabel={t('result.replayA11y')}>
+              <Text style={styles.toolText}>{t('result.replay')}</Text>
             </Pressable>
             {globeAvailable && (
               <View style={styles.segment}>
@@ -133,7 +140,7 @@ export default function Result() {
                     accessibilityState={{ selected: view === v }}
                   >
                     <Text style={[styles.toolText, view !== v && { color: colors.muted }]}>
-                      {v === 'map' ? 'Map' : 'Globe'}
+                      {t(v === 'map' ? 'result.map' : 'result.globe')}
                     </Text>
                   </Pressable>
                 ))}
@@ -143,36 +150,44 @@ export default function Result() {
         </View>
 
         <View style={styles.headline}>
-          <Text style={styles.kicker}>{airburst ? 'AIRBURST ENERGY' : 'ENERGY RELEASED'}</Text>
+          <Text style={styles.kicker}>{t(airburst ? 'result.airburstEnergy' : 'result.energyReleased')}</Text>
           <Text style={styles.energy} adjustsFontSizeToFit numberOfLines={1}>
             {energy.value} {energy.unit}
           </Text>
-          <Text style={styles.multiple}>≈ {multiple} the Hiroshima bomb</Text>
+          <Text style={styles.multiple}>{hiroshima}</Text>
         </View>
 
         <View style={styles.grid}>
           {airburst ? (
             <StatCard
-              label="CRATER WIDTH"
-              value="None"
-              hint={`Exploded ${sig3(result.airburstAltitudeM! / 1000)} km up`}
+              label={t('result.craterWidth')}
+              value={t('common.none')}
+              hint={t('result.exploded', { altitude: formatDistance(result.airburstAltitudeM!, units) })}
             />
           ) : (
             <StatCard
-              label="CRATER WIDTH"
-              value={formatDistance(result.craterDiameterM!)}
-              hint={`${formatDistance(result.craterDepthM!)} deep`}
+              label={t('result.craterWidth')}
+              value={formatDistance(result.craterDiameterM!, units)}
+              hint={t('result.deep', { depth: formatDistance(result.craterDepthM!, units) })}
             />
           )}
           <StatCard
-            label="QUAKE EQUIVALENT"
-            value={result.seismicMagnitude !== null ? `${result.seismicMagnitude.toFixed(1)} M` : '—'}
-            hint={result.seismicMagnitude !== null ? 'Richter scale' : 'Airbursts barely shake the ground'}
+            label={t('result.quake')}
+            value={result.seismicMagnitude !== null ? t('result.quakeValue', { m: dec(result.seismicMagnitude, 1) }) : '—'}
+            hint={t(result.seismicMagnitude !== null ? 'result.richter' : 'result.quakeAirburst')}
           />
         </View>
         <View style={styles.grid}>
-          <StatCard label="BUILDINGS COLLAPSE" value={distanceText(severe)} hint={ringHint(severe, 'radius, ~5 psi')} />
-          <StatCard label="WINDOWS SHATTER" value={distanceText(windows)} hint={ringHint(windows, 'radius, ~1 psi')} />
+          <StatCard
+            label={t('result.buildings')}
+            value={distanceText(severe)}
+            hint={ringHint(severe, t('result.buildingsHint'))}
+          />
+          <StatCard
+            label={t('result.windows')}
+            value={distanceText(windows)}
+            hint={ringHint(windows, t('result.windowsHint'))}
+          />
         </View>
 
         <PopulationCard
@@ -185,15 +200,15 @@ export default function Result() {
         {isPro ? (
           <View style={styles.grid}>
             <StatCard
-              label="3RD-DEGREE BURNS"
+              label={t('result.burns')}
               value={distanceText(thermal)}
-              hint={thermal ? ringHint(thermal, 'radius, exposed skin') : 'No thermal pulse at ground'}
+              hint={thermal ? ringHint(thermal, t('result.burnsHint')) : t('result.burnsNone')}
             />
-            <StatCard label="HAPPENS ON EARTH" value={formatYears(result.recurrenceYears)} />
+            <StatCard label={t('result.recurrence')} value={formatYears(result.recurrenceYears)} />
           </View>
         ) : (
           <SecondaryButton
-            label="Unlock thermal burns ring · Pro"
+            label={t('result.unlockBurns')}
             onPress={openPaywall}
             style={styles.unlock}
           />
@@ -211,22 +226,15 @@ export default function Result() {
         {!isPro && (
           <View style={styles.lockedHint}>
             <LockIcon size={12} color={colors.dim} />
-            <Text style={styles.footnote}>
-              Pro adds iron & comet asteroids, the burns ring and famous impacts.
-            </Text>
+            <Text style={styles.footnote}>{t('result.proHint')}</Text>
           </View>
         )}
-        <Text style={styles.footnote}>
-          Estimates from the Earth Impact Effects Program equations (Collins, Melosh & Marcus,
-          2005). Assumes a land impact at {result.params.angleDeg}°. People from NASA SEDAC GPWv4
-          scaled to 2026; casualties per NASA&apos;s PAIR model (everyone inside the 4 psi or burns
-          radius), global deaths per Chapman &amp; Morrison (1994). Rough estimates.
-        </Text>
+        <Text style={styles.footnote}>{t('result.footnote', { angle: result.params.angleDeg })}</Text>
       </ScrollView>
 
       <View style={styles.footer}>
-        <SecondaryButton label="Try again" onPress={() => router.back()} style={styles.flex} />
-        <PrimaryButton label="Share" onPress={() => router.push('/share')} style={styles.flex} />
+        <SecondaryButton label={t('result.tryAgain')} onPress={() => router.back()} style={styles.flex} />
+        <PrimaryButton label={t('common.share')} onPress={() => router.push('/share')} style={styles.flex} />
       </View>
       <AdBanner />
     </SafeAreaView>

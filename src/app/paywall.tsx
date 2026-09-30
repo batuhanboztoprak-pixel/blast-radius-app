@@ -6,14 +6,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAds } from '../ads/ads';
 import { CheckIcon, CloseIcon } from '../components/icons';
 import { IconButton, PrimaryButton } from '../components/ui';
+import { t, type MessageKey } from '../i18n/core';
 import { usePremium } from '../state/premium';
 import { colors, fonts, radius } from '../theme';
 
-const PERKS = [
-  { title: 'No ads', body: 'Banners and full-screen ads, gone for good.' },
-  { title: 'Iron & comet asteroids', body: 'Dense iron punches deeper; icy comets burst higher and faster.' },
-  { title: 'Thermal burns ring', body: 'See how far the fireball’s heat causes 3rd-degree burns.' },
-  { title: 'Famous impacts', body: 'Tunguska, Chelyabinsk and Chicxulub — dropped anywhere you like.' },
+const PERKS: { title: MessageKey; body: MessageKey }[] = [
+  { title: 'paywall.noAds', body: 'paywall.noAdsBody' },
+  { title: 'paywall.compositions', body: 'paywall.compositionsBody' },
+  { title: 'paywall.thermal', body: 'paywall.thermalBody' },
+  { title: 'paywall.presets', body: 'paywall.presetsBody' },
 ];
 
 export default function Paywall() {
@@ -27,22 +28,22 @@ export default function Paywall() {
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <View style={styles.top}>
-        <IconButton onPress={() => router.back()} label="Close">
+        <IconButton onPress={() => router.back()} label={t('common.close')}>
           <CloseIcon />
         </IconButton>
       </View>
       <ScrollView contentContainerStyle={styles.body}>
-        <Text style={styles.kicker}>BLAST RADIUS PRO</Text>
-        <Text style={styles.title}>Unlock the full arsenal</Text>
-        <Text style={styles.subtitle}>One payment. Yours forever. No subscription.</Text>
+        <Text style={styles.kicker}>{t('paywall.kicker')}</Text>
+        <Text style={styles.title}>{t('paywall.title')}</Text>
+        <Text style={styles.subtitle}>{t('paywall.subtitle')}</Text>
 
         <View style={styles.perks}>
           {PERKS.map((p) => (
             <View key={p.title} style={styles.perk}>
               <CheckIcon />
               <View style={styles.perkText}>
-                <Text style={styles.perkTitle}>{p.title}</Text>
-                <Text style={styles.perkBody}>{p.body}</Text>
+                <Text style={styles.perkTitle}>{t(p.title)}</Text>
+                <Text style={styles.perkBody}>{t(p.body)}</Text>
               </View>
             </View>
           ))}
@@ -53,17 +54,17 @@ export default function Paywall() {
 
       <View style={styles.footer}>
         <PrimaryButton
-          label={price ? `Unlock Pro · ${price}` : 'Unlock Pro'}
+          label={price ? t('paywall.unlockPrice', { price }) : t('paywall.unlock')}
           onPress={purchase}
           loading={busy}
         />
         <View style={styles.links}>
           <Pressable onPress={restore} disabled={busy} accessibilityRole="button" hitSlop={8}>
-            <Text style={styles.link}>Restore purchase</Text>
+            <Text style={styles.link}>{t('paywall.restore')}</Text>
           </Pressable>
           {showPrivacyOptions && (
             <Pressable onPress={showPrivacyOptions} accessibilityRole="button" hitSlop={8}>
-              <Text style={styles.link}>Ad privacy choices</Text>
+              <Text style={styles.link}>{t('paywall.privacy')}</Text>
             </Pressable>
           )}
         </View>

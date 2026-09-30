@@ -9,6 +9,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
+import { t } from '../i18n/core';
 import { colors, fonts, radius } from '../theme';
 import { BackIcon, LockIcon } from './icons';
 
@@ -93,7 +94,7 @@ export function StepHeader({
     <View style={styles.header}>
       <View style={styles.stepRow}>
         {onBack && (
-          <IconButton onPress={onBack} label="Back">
+          <IconButton onPress={onBack} label={t('common.back')}>
             <BackIcon />
           </IconButton>
         )}
@@ -122,7 +123,7 @@ export function Chip({
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      accessibilityLabel={locked ? `${label}, requires Pro` : label}
+      accessibilityLabel={locked ? t('chip.requiresPro', { label }) : label}
       onPress={onPress}
       style={({ pressed }) => [
         styles.chip,

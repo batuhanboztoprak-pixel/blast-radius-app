@@ -17,7 +17,18 @@
       "bundleIdentifier": "com.blastradius.app",
       "supportsTablet": false,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleAllowMixedLocalizations": true,
+        "CFBundleLocalizations": [
+          "en",
+          "tr",
+          "es",
+          "pt",
+          "de",
+          "fr",
+          "ja"
+        ],
+        "CFBundleDevelopmentRegion": "en"
       },
       "privacyManifests": {
         "NSPrivacyAccessedAPITypes": [
@@ -129,6 +140,15 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "locales": {
+      "en": "./languages/en.json",
+      "tr": "./languages/tr.json",
+      "es": "./languages/es.json",
+      "pt": "./languages/pt.json",
+      "de": "./languages/de.json",
+      "fr": "./languages/fr.json",
+      "ja": "./languages/ja.json"
     }
   }
 }

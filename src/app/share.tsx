@@ -8,13 +8,16 @@ import { captureRef } from 'react-native-view-shot';
 import { ShareCard } from '../components/ShareCard';
 import { visibleRings } from '../components/rings';
 import { PrimaryButton, StepHeader } from '../components/ui';
+import { t } from '../i18n/core';
 import { usePremium } from '../state/premium';
 import { useSimulation } from '../state/simulation';
+import { useUnits } from '../state/units';
 import { colors, fonts } from '../theme';
 
 export default function Share() {
   const { result, location } = useSimulation();
   const { isPro } = usePremium();
+  const { units } = useUnits();
   const { width } = useWindowDimensions();
   const card = useRef<View>(null);
   const [ready, setReady] = useState(false);
@@ -31,16 +34,16 @@ export default function Share() {
     try {
       const uri = await captureRef(card, { format: 'png', quality: 1, result: 'tmpfile' });
       if (!(await Sharing.isAvailableAsync())) {
-        setError('Sharing is not available on this device.');
+        setError(t('share.unavailable'));
         return;
       }
       await Sharing.shareAsync(uri, {
         mimeType: 'image/png',
         UTI: 'public.png',
-        dialogTitle: 'Share your impact',
+        dialogTitle: t('share.dialogTitle'),
       });
     } catch {
-      setError('Could not create the image. Please try again.');
+      setError(t('share.failed'));
     } finally {
       setSharing(false);
     }
@@ -48,7 +51,7 @@ export default function Share() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <StepHeader step="SHARE" title="Your impact card" onBack={() => router.back()} />
+      <StepHeader step={t('share.step')} title={t('share.title')} onBack={() => router.back()} />
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.cardShadow}>
           <ShareCard
@@ -57,6 +60,7 @@ export default function Share() {
             result={result}
             location={location}
             rings={visibleRings(result.rings, isPro)}
+            units={units}
             onReady={() => setReady(true)}
           />
         </View>
@@ -64,7 +68,7 @@ export default function Share() {
       </ScrollView>
       <View style={styles.footer}>
         <PrimaryButton
-          label={ready ? 'Share image' : 'Preparing map…'}
+          label={t(ready ? 'share.button' : 'share.preparing')}
           onPress={share}
           loading={sharing}
           disabled={!ready}

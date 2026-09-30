@@ -36,12 +36,14 @@ src/
   population/     grid.ts (offline GPWv4 population lookups), casualties.ts (NASA PAIR + global effects) — unit-tested
   data/           generated: populationGrid.ts (scripts/build-population.py), land.ts (Natural Earth 110m)
   vendor/         d3-geo (+3 d3-array helpers), vendored for the globe — see vendor/README.md
-  state/          simulation.tsx (location + params + memoised result), premium.tsx (StoreKit via expo-iap), world.tsx (world-population counter)
+  i18n/           core.ts (t(), language), detect.ts (device language/region), locales/*.ts — see docs/LOCALIZATION.md
+  state/          simulation.tsx (location + params + memoised result), premium.tsx (StoreKit via expo-iap), world.tsx (world-population counter), units.tsx (km/miles)
   ads/            ads.tsx (UMP consent → ATT → AdMob init, interstitial pacing), AdBanner.tsx
   components/     ImpactMap, StrikeAnimation, GlobeView (+ globe.ts), PopulationCard, ShareCard, RingLegend, UI primitives, icons
   lib/geo.ts      map framing + Web-Mercator math for the share-card snapshot
 docs/
   PHYSICS.md          equations, constants and known limitations
+  LOCALIZATION.md     languages, translation files, App Store listings (store/listing.json)
   LAUNCH_CHECKLIST.md AdMob / App Store Connect / privacy steps
 ```
 

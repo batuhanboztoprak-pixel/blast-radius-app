@@ -24,6 +24,7 @@ import {
 } from 'react';
 
 import { PRO_PRODUCT_ID } from '../config';
+import { t } from '../i18n/core';
 
 const STORAGE_KEY = 'blast-radius:pro';
 
@@ -94,7 +95,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     });
     const failed = purchaseErrorListener((e) => {
       setBusy(false);
-      if (!isUserCancelledError(e)) setError(e.message || 'Purchase failed. Please try again.');
+      if (!isUserCancelledError(e)) setError(e.message || t('purchase.failed'));
     });
 
     (async () => {
@@ -130,7 +131,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       setBusy(false);
       if (!isUserCancelledError(e)) {
-        setError(e instanceof Error ? e.message : 'Purchase failed. Please try again.');
+        setError(e instanceof Error ? e.message : t('purchase.failed'));
       }
     }
   }, [connect]);
@@ -142,10 +143,10 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
       await connect();
       await restorePurchases();
       const owned = await refreshEntitlement();
-      if (!owned) setError('No previous purchase found for this Apple ID.');
+      if (!owned) setError(t('purchase.nothingToRestore'));
       return owned;
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Restore failed. Please try again.');
+      setError(e instanceof Error ? e.message : t('purchase.restoreFailed'));
       return false;
     } finally {
       setBusy(false);

@@ -1,0 +1,7 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "Blast Radius",
+    "NSLocationWhenInUseUsageDescription": "Konumun yalnızca konum düğmesine dokunduğunda, çarpma noktasını bulunduğun yere koymak için kullanılır.",
+    "NSUserTrackingUsageDescription": "Bu izin, sana daha alakalı reklamlar göstermemizi sağlar. Blast Radius Pro reklamları tamamen kaldırır."
+  }
+}

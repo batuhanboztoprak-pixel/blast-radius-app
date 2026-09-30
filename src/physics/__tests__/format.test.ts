@@ -13,8 +13,8 @@ describe('format', () => {
     expect(formatEnergyMt(0.5)).toEqual({ value: '500', unit: 'kilotons' });
     expect(formatEnergyMt(6170)).toEqual({ value: '6,170', unit: 'megatons' });
     expect(formatEnergyMt(7.5e7)).toEqual({ value: '75', unit: 'million megatons' });
-    expect(formatMultiple(411_234)).toBe('411,000×');
-    expect(formatMultiple(5e6)).toBe('5 million×');
+    expect(formatMultiple(411_234)).toBe('411,000');
+    expect(formatMultiple(5e6)).toBe('5 million');
     expect(formatYears(98_700)).toBe('every ~98,700 years');
   });
 });
