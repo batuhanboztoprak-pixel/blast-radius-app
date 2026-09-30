@@ -12,12 +12,13 @@ const WORDMARK_ASPECT = 1543 / 488;
 const IMPACT = { x: 0.502, y: 0.518 };
 
 const TOTAL_MS = 3200;
+const SPLASH_WORDMARK_WIDTH = 280;
 /** The native splash colour (app.json), so the hand-over is seamless. */
 export const INTRO_BG = '#0A0340';
 
 /**
  * The launch intro. It starts exactly where the native splash leaves off (the
- * wordmark, centred at 70% width), then the impact artwork rises in behind it,
+ * wordmark, centred, 280 pt wide), then the impact artwork rises in behind it,
  * the meteor hits with a flash and a shake, the rings glow, and the wordmark
  * settles below with the tagline. A tap skips it.
  */
@@ -27,8 +28,9 @@ export function IntroSplash({ onDone }: { onDone: () => void }) {
   const [fade] = useState(() => new Animated.Value(1));
 
   // Wordmark: starts as on the native splash, ends smaller over the bottom of the planet.
-  const wm0 = w * 0.7;
-  const wm1 = w * 0.64;
+  // 280 pt = imageWidth of the native splash (app.json), so the first frame matches it exactly.
+  const wm0 = SPLASH_WORDMARK_WIDTH;
+  const wm1 = Math.min(w * 0.64, 300);
   const wmH0 = wm0 / WORDMARK_ASPECT;
   const wmScale = wm1 / wm0;
 

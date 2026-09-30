@@ -9,11 +9,6 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0A0340",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0A0340"
-    },
     "ios": {
       "bundleIdentifier": "com.blastradius.app",
       "supportsTablet": false,
@@ -141,6 +136,14 @@
             "3rd42ekr43.skadnetwork",
             "3qcr597p9d.skadnetwork"
           ]
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0A0340",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 280
         }
       ]
     ],

@@ -84,7 +84,7 @@ release builds.
 - [ ] Chicxulub shows "🦖 Dinosaur killer" under its chip and on the result card.
 - [ ] Famous strikes: tapping the selected preset again deselects it and restores the asteroid you had before.
 - [ ] Rock, iron and comet each have their own icon and description on the asteroid screen and their own meteor in the strike (orange rock, thin white-hot iron with sparks, long blue comet with two tails).
-- [ ] New app icon on the home screen (also check Settings → Home Screen → Dark and Tinted). Native splash is the wordmark on deep violet, and the intro picks up from it without a jump.
+- [ ] New app icon on the home screen (also check Settings → Home Screen → Dark and Tinted). Native splash (expo-splash-screen plugin) is the wordmark on deep violet, and the intro picks up from it without a jump.
 - [ ] Launch intro: the wordmark moves down as the impact artwork rises in behind it, flash and shake on impact, the rings flare, then the tagline. Tap skips. Check on a small phone (SE) and a Pro Max that nothing is cut off.
 - [ ] Rewarded ads: after 3 ad unlocks in a day the paywall hides "Watch a short ad" and says to come back tomorrow; the count resets the next day.
 
