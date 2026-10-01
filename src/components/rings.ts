@@ -20,8 +20,8 @@ export const RING_STYLE: Record<Ring['kind'], { color: string; fill: string; str
   },
   windows: {
     color: colors.blue,
-    fill: 'rgba(74,158,255,0.08)',
-    stroke: 'rgba(74,158,255,0.7)',
+    fill: 'rgba(74,158,255,0.10)',
+    stroke: 'rgba(74,158,255,0.95)',
   },
 };
 

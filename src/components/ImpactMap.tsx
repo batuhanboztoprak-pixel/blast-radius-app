@@ -383,7 +383,7 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
                 radius={radius}
                 fillColor={s.fill}
                 strokeColor={s.stroke}
-                strokeWidth={1.5}
+                strokeWidth={2}
               />
             );
           })}

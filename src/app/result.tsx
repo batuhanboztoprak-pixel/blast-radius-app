@@ -191,9 +191,10 @@ export default function Result() {
                 longitude={location.longitude}
                 rings={rings}
                 width={width}
-                height={globeH}
+                height={mapHeight}
+                area={{ top: globeTop, height: globeH }}
                 haze={globalFraction}
-                style={{ marginTop: globeTop }}
+                style={StyleSheet.absoluteFill}
               />
               <Text style={styles.globeHint}>{t('result.dragToSpin')}</Text>
               <Text style={styles.globeScroll}>{t('result.scrollDetails')} ↓</Text>

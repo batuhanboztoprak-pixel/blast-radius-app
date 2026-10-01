@@ -13,9 +13,14 @@ interface Props {
   latitude: number;
   longitude: number;
   rings: Ring[];
-  /** Canvas size. The globe fills the shorter side at zoom 1; pinch zooms in up to 6×. */
+  /** Canvas size. When zoomed in, the globe fills the whole canvas. */
   width: number;
   height: number;
+  /**
+   * The band of the canvas the globe fits in at zoom 1 (defaults to the whole
+   * canvas), so the canvas can run under the header while the globe sits below it.
+   */
+  area?: { top: number; height: number };
   /**
    * Share of humanity outside the rings killed by global effects (0–1). Tints the
    * whole planet so it's clear the damage doesn't stop at the rings.
@@ -36,13 +41,15 @@ const RAD = Math.PI / 180;
  * Drawn with Skia on the UI thread, so it stays smooth. Rings are true geodesic
  * circles. Give it a `key` of the impact coordinates so it re-centres when they change.
  */
-export function GlobeView({ latitude, longitude, rings, width, height, haze = 0, style }: Props) {
+export function GlobeView({ latitude, longitude, rings, width, height, area, haze = 0, style }: Props) {
   const lat = useSharedValue(latitude);
   const lon = useSharedValue(longitude);
   const zoom = useSharedValue(1);
-  const baseR = Math.min(width, height) / 2 - 8;
+  const bandTop = area?.top ?? 0;
+  const bandH = area?.height ?? height;
+  const baseR = Math.min(width, bandH) / 2 - 8;
   const cx = width / 2;
-  const cy = height / 2;
+  const cy = bandTop + bandH / 2;
 
   // Ring circles depend on the strike, not the view: build them once.
   const ringShapes = useMemo(
@@ -168,17 +175,21 @@ export function GlobeView({ latitude, longitude, rings, width, height, haze = 0,
   return (
     <View style={[{ width, height }, styles.wrap, style]} {...pan.panHandlers}>
       <Canvas style={{ width, height }}>
-        <Circle cx={cx} cy={cy} r={glowR} color={colors.blue} opacity={0.1} />
+        <Circle cx={cx} cy={cy} r={glowR} color={colors.blue} opacity={0.12} />
+        {haze > 0 && (
+          // Global effects: a burning-red atmosphere rather than a muddy planet.
+          <Circle cx={cx} cy={cy} r={glowR} style="stroke" strokeWidth={8} color={colors.accent} opacity={0.15 + 0.35 * haze} />
+        )}
         <Circle cx={cx} cy={cy} r={radius}>
-          <RadialGradient c={oceanCenter} r={oceanR} colors={['#1A2E52', '#0A1326']} />
+          <RadialGradient c={oceanCenter} r={oceanR} colors={['#21417A', '#0A1633']} />
         </Circle>
-        <Path path={grat} style="stroke" strokeWidth={0.75} color="rgba(255,255,255,0.08)" />
-        <Path path={land} color="#34435F" />
-        {haze > 0 && <Circle cx={cx} cy={cy} r={radius} color="#8A3414" opacity={0.18 + 0.32 * haze} />}
+        <Path path={grat} style="stroke" strokeWidth={0.75} color="rgba(255,255,255,0.1)" />
+        <Path path={land} color="#52668F" />
+        {haze > 0 && <Circle cx={cx} cy={cy} r={radius} color="#C2461C" opacity={0.05 + 0.13 * haze} />}
         {ringShapes.slice(0, 4).map((r, i) => (
           <Group key={r.kind}>
             <Path path={ringPaths[i]} color={RING_STYLE[r.kind].fill} />
-            <Path path={ringPaths[i]} style="stroke" strokeWidth={1.5} color={RING_STYLE[r.kind].stroke} />
+            <Path path={ringPaths[i]} style="stroke" strokeWidth={2} color={RING_STYLE[r.kind].stroke} />
           </Group>
         ))}
         <Circle cx={cx} cy={cy} r={radius}>
