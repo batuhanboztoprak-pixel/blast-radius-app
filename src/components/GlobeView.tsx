@@ -1,7 +1,7 @@
 import { Canvas, Circle, Group, Path, RadialGradient, usePathValue } from '@shopify/react-native-skia';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { PanResponder, StyleSheet, View, type GestureResponderEvent, type StyleProp, type ViewStyle } from 'react-native';
-import { cancelAnimation, useDerivedValue, useSharedValue, withDecay, withTiming } from 'react-native-reanimated';
+import { cancelAnimation, useDerivedValue, useSharedValue, withDecay } from 'react-native-reanimated';
 
 import type { Ring } from '../physics/impact';
 import { geoCircle } from '../vendor/d3-geo';
@@ -164,11 +164,6 @@ export function GlobeView({ latitude, longitude, rings, width, height, haze = 0,
       },
     });
   });
-
-  // Double-tap-free zoom reset when the strike changes.
-  useEffect(() => {
-    zoom.value = withTiming(1, { duration: 250 });
-  }, [latitude, longitude, zoom]);
 
   return (
     <View style={[{ width, height }, styles.wrap, style]} {...pan.panHandlers}>

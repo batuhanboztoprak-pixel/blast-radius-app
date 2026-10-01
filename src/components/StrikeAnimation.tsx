@@ -102,7 +102,7 @@ export function StrikeAnimation({
         const d = Math.min(maxPx * (0.35 + jitter(i + 31) * 0.35), 220) * intensity;
         return { dx: Math.cos(a) * d, dy: Math.sin(a) * d, s: 2 + jitter(i + 57) * 3 };
       }),
-    [maxPx],
+    [maxPx, intensity],
   );
 
   useEffect(() => {
