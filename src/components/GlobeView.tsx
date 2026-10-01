@@ -56,12 +56,10 @@ export function GlobeView({ latitude, longitude, rings, width, height, area, haz
     () =>
       rings.map((r) => {
         const s: Shapes = { xyz: [], runs: [] };
-        const circle = geoCircle()
-          .center([longitude, latitude])
-          .precision(2)
-          .radius(Math.min(Math.max(r.radiusM / 1000 / KM_PER_DEG, 0.25), 179.5))();
+        const deg = Math.min(Math.max(r.radiusM / 1000 / KM_PER_DEG, 0.25), 179.5);
+        const circle = geoCircle().center([longitude, latitude]).precision(2).radius(deg)();
         for (const ring of circle.coordinates) pushRing(s, ring);
-        return { kind: r.kind, s };
+        return { kind: r.kind, s, deg };
       }),
     [rings, latitude, longitude],
   );
@@ -70,6 +68,14 @@ export function GlobeView({ latitude, longitude, rings, width, height, area, haz
   const r1 = ringShapes[1]?.s ?? null;
   const r2 = ringShapes[2]?.s ?? null;
   const r3 = ringShapes[3]?.s ?? null;
+  // cos of each ring's angular radius: the view centre is inside a ring when
+  // its angular distance from the impact is smaller.
+  const c0 = Math.cos((ringShapes[0]?.deg ?? 0) * RAD);
+  const c1 = Math.cos((ringShapes[1]?.deg ?? 0) * RAD);
+  const c2 = Math.cos((ringShapes[2]?.deg ?? 0) * RAD);
+  const c3 = Math.cos((ringShapes[3]?.deg ?? 0) * RAD);
+  const sinI = Math.sin(latitude * RAD);
+  const cosI = Math.cos(latitude * RAD);
 
   const radius = useDerivedValue(() => baseR * zoom.value);
   const land = usePathValue((p) => {
@@ -82,19 +88,31 @@ export function GlobeView({ latitude, longitude, rings, width, height, area, haz
   });
   const ring0 = usePathValue((p) => {
     'worklet';
-    if (r0) drawShapes(p, r0, lat.value, lon.value, baseR * zoom.value, cx, cy, true);
+    if (r0) {
+      const d = Math.sin(lat.value * RAD) * sinI + Math.cos(lat.value * RAD) * cosI * Math.cos((lon.value - longitude) * RAD);
+      drawShapes(p, r0, lat.value, lon.value, baseR * zoom.value, cx, cy, true, d > c0);
+    }
   });
   const ring1 = usePathValue((p) => {
     'worklet';
-    if (r1) drawShapes(p, r1, lat.value, lon.value, baseR * zoom.value, cx, cy, true);
+    if (r1) {
+      const d = Math.sin(lat.value * RAD) * sinI + Math.cos(lat.value * RAD) * cosI * Math.cos((lon.value - longitude) * RAD);
+      drawShapes(p, r1, lat.value, lon.value, baseR * zoom.value, cx, cy, true, d > c1);
+    }
   });
   const ring2 = usePathValue((p) => {
     'worklet';
-    if (r2) drawShapes(p, r2, lat.value, lon.value, baseR * zoom.value, cx, cy, true);
+    if (r2) {
+      const d = Math.sin(lat.value * RAD) * sinI + Math.cos(lat.value * RAD) * cosI * Math.cos((lon.value - longitude) * RAD);
+      drawShapes(p, r2, lat.value, lon.value, baseR * zoom.value, cx, cy, true, d > c2);
+    }
   });
   const ring3 = usePathValue((p) => {
     'worklet';
-    if (r3) drawShapes(p, r3, lat.value, lon.value, baseR * zoom.value, cx, cy, true);
+    if (r3) {
+      const d = Math.sin(lat.value * RAD) * sinI + Math.cos(lat.value * RAD) * cosI * Math.cos((lon.value - longitude) * RAD);
+      drawShapes(p, r3, lat.value, lon.value, baseR * zoom.value, cx, cy, true, d > c3);
+    }
   });
   const ringPaths = [ring0, ring1, ring2, ring3];
 

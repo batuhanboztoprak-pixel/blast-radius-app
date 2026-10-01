@@ -108,8 +108,14 @@ export default function Result() {
   const strikeDone = playedToken === token;
   const focusRing = focus ? rings.find((r) => r.kind === focus) : undefined;
   const layers = stageLayers(stageOpen && stageReadable && strikeDone && view === 'map' ? stage : undefined, result);
-  const pickStage = (id: StageId) => {
+  const pickStage = (id: StageId, auto = false) => {
     setStageId(id);
+    if (auto) {
+      // ▶ Play stepping on its own: never switch views or move the page under
+      // the user (they may be spinning the globe or reading below).
+      if (view === 'map') setStageOpen(true);
+      return;
+    }
     setStageOpen(true);
     setFocus(null);
     if (view !== 'map') setView('map');

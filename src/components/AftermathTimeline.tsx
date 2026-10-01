@@ -15,7 +15,8 @@ interface Props {
   /** Pro stages are readable (Pro, or unlocked for this strike). */
   unlocked: boolean;
   selected: StageId;
-  onSelect: (id: StageId) => void;
+  /** `auto` is true when ▶ Play advanced the stage rather than a tap. */
+  onSelect: (id: StageId, auto?: boolean) => void;
   onUnlock: () => void;
 }
 
@@ -133,7 +134,7 @@ export function AftermathTimeline({ stages, units, unlocked, selected, onSelect,
         setPlaying(false);
         return;
       }
-      selectRef.current(next.id);
+      selectRef.current(next.id, true);
       if (next.pro && !unlocked) setPlaying(false);
     }, PLAY_STEP_MS);
     return () => clearInterval(timer);
@@ -152,7 +153,7 @@ export function AftermathTimeline({ stages, units, unlocked, selected, onSelect,
         <Text style={styles.header}>{t('af.header')}</Text>
         <Pressable
           onPress={() => {
-            if (!playing && stage.id === stages[stages.length - 1]?.id) onSelect(stages[0].id);
+            if (!playing && stage.id === stages[stages.length - 1]?.id) onSelect(stages[0].id, true);
             setPlaying((p) => !p);
           }}
           accessibilityRole="button"
