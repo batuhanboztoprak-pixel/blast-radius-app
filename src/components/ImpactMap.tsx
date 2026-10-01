@@ -52,6 +52,8 @@ interface Props {
    * it settles top-down. Pro, a first-strike taste, or a rewarded unlock.
    */
   cinematic?: boolean;
+  /** Cinematic only: the meteor starts falling, hits, and the sequence ends (for the HUD and sound). */
+  onCinematicPhase?: (phase: 'fall' | 'impact' | 'done') => void;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -59,8 +61,13 @@ const EARTH_RADIUS_M = 6.371e6;
 
 
 /** Cinematic timeline, ms. */
-const CINE_FALL = 1500;
+export const CINE_FALL = 2800;
 const CINE_GROW = 2000;
+/** The first moments after impact play in slow motion: this long, at this speed. */
+const SLOW_MS = 700;
+const SLOW_RATE = 0.3;
+/** Extra wall-clock time the slow motion adds. */
+const SLOW_EXTRA = SLOW_MS * (1 - SLOW_RATE);
 const CINE_ORBIT = 1600;
 const CINE_SETTLE = 900;
 /** Beyond this the camera can't frame the rings on a tilted flat map anyway. */
@@ -84,6 +91,7 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
     focusRadiusM = null,
     strikeToken = 0,
     onStrikeEnd,
+    onCinematicPhase,
     lockedRing,
     onLockedPress,
     cinematic = false,
@@ -111,7 +119,9 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
   /** Cinematic: set when the meteor lands; starts the ring growth and camera pull-back. */
   const [impactAt, setImpactAt] = useState(0);
   const endRef = useRef(onStrikeEnd);
+  const phaseRef = useRef(onCinematicPhase);
   useEffect(() => {
+    phaseRef.current = onCinematicPhase;
     endRef.current = onStrikeEnd;
   });
   const reveal = () => {
@@ -224,6 +234,7 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
             token: strikeToken,
             cinematic: true,
           });
+          phaseRef.current?.('fall');
           return;
         }
         // Screen scale at the impact latitude from a point 50 km east along the parallel.
@@ -267,28 +278,32 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
     const m = map.current;
     const R = Math.min(rings[0]?.radiusM ?? FALLBACK_FRAME_RADIUS_M, CINE_MAX_FRAME_M);
     const tick = setInterval(() => {
-      const e = Date.now() - impactAt;
+      // Slow motion first, then real speed.
+      const w = Date.now() - impactAt;
+      const e = w < SLOW_MS ? w * SLOW_RATE : w - SLOW_EXTRA;
       if (e >= CINE_GROW) {
         clearInterval(tick);
         setGrowth(CINE_GROW);
       } else setGrowth(Math.max(e, 1));
-    }, 50);
-    m?.animateCamera({ center: location, pitch: 50, heading: 75, altitude: R * 3.4 }, { duration: CINE_GROW + 300 });
+    }, 40);
+    const G = CINE_GROW + SLOW_EXTRA;
+    m?.animateCamera({ center: location, pitch: 50, heading: 75, altitude: R * 3.4 }, { duration: G + 300 });
     const orbit = setTimeout(() => {
       map.current?.animateCamera({ heading: 115 }, { duration: CINE_ORBIT });
-    }, CINE_GROW + 300);
+    }, G + 300);
     const settle = setTimeout(() => {
       map.current?.animateCamera({ center: location, pitch: 0, heading: 0 }, { duration: CINE_SETTLE });
-    }, CINE_GROW + 300 + CINE_ORBIT);
+    }, G + 300 + CINE_ORBIT);
     const frame = setTimeout(() => {
       map.current?.animateToRegion(region, 400);
-    }, CINE_GROW + 300 + CINE_ORBIT + CINE_SETTLE);
+    }, G + 300 + CINE_ORBIT + CINE_SETTLE);
     const done = setTimeout(() => {
       setGrowth(null);
       setCameraFree(false);
       setImpactAt(0);
+      phaseRef.current?.('done');
       reveal();
-    }, CINE_GROW + 300 + CINE_ORBIT + CINE_SETTLE + 450);
+    }, G + 300 + CINE_ORBIT + CINE_SETTLE + 450);
     return () => {
       clearInterval(tick);
       clearTimeout(orbit);
@@ -310,6 +325,14 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
     if (big) {
       setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}), 320);
       setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}), 560);
+      // The ground keeps shaking as the shock wave rolls out.
+      [820, 1050, 1300, 1600, 1950].forEach((ms, i) =>
+        setTimeout(
+          () => Haptics.impactAsync(i < 2 ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light).catch(() => {}),
+          ms,
+        ),
+      );
+      phaseRef.current?.('impact');
       setImpactAt(Date.now());
     }
     shake.setValue(0);

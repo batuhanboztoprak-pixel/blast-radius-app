@@ -81,4 +81,4 @@ function isFacing(lat: number, lon: number, viewLat: number, viewLon: number): b
 /** Rings this large are hard to read on a flat map; show the globe by default. */
 export const GLOBE_DEFAULT_ABOVE_M = 2_000_000;
 /** Offer the globe toggle from this ring size up. */
-export const GLOBE_AVAILABLE_ABOVE_M = 500_000;
+export const GLOBE_AVAILABLE_ABOVE_M = 100_000;

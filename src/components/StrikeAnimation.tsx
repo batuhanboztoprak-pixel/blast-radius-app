@@ -87,6 +87,9 @@ export function StrikeAnimation({
   const waves = useState(() => rings.map(() => new Animated.Value(0)))[0];
   const front = useState(() => new Animated.Value(0))[0];
   const debris = useState(() => new Animated.Value(0))[0];
+  const plume = useState(() => new Animated.Value(0))[0];
+  /** The cinematic strike gets a longer, blinding flash and a rising fireball plume. */
+  const cine = intensity > 1;
 
   const maxPx = Math.min(Math.max(...rings.map((r) => r.px), 60), MAX_RING_PX);
   const crater = rings.find((r) => r.kind === 'crater')?.px ?? 0;
@@ -122,8 +125,9 @@ export function StrikeAnimation({
       Animated.parallel([
         Animated.sequence([
           Animated.timing(flash, { toValue: 1, duration: 70 * intensity, ...native }),
-          Animated.timing(flash, { toValue: 0, duration: 420 * intensity, easing: Easing.out(Easing.quad), ...native }),
+          Animated.timing(flash, { toValue: 0, duration: cine ? 1400 : 420 * intensity, easing: Easing.out(Easing.quad), ...native }),
         ]),
+        ...(cine ? [Animated.timing(plume, { toValue: 1, duration: 3000, easing: Easing.out(Easing.quad), ...native })] : []),
         Animated.timing(fire, { toValue: 1, duration: 1300, easing: Easing.out(Easing.quad), ...native }),
         Animated.timing(front, { toValue: 1, duration: 1500, easing: Easing.out(Easing.cubic), ...native }),
         Animated.timing(debris, { toValue: 1, duration: 900, easing: Easing.out(Easing.quad), ...native }),
@@ -278,8 +282,39 @@ export function StrikeAnimation({
         </Svg>
       </Animated.View>
 
+      {cine && (
+        // A fireball plume rising out of the impact and spreading as it cools.
+        <Animated.View
+          style={{
+            position: 'absolute',
+            left: center.x - fireR * 1.4,
+            top: center.y - fireR * 1.4,
+            width: fireR * 2.8,
+            height: fireR * 2.8,
+            opacity: plume.interpolate({ inputRange: [0, 0.06, 0.45, 1], outputRange: [0, 0.95, 0.75, 0] }),
+            transform: [
+              { translateY: plume.interpolate({ inputRange: [0, 1], outputRange: [0, -fireR * 1.5] }) },
+              { scale: plume.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0.25, 1, 1.5] }) },
+            ],
+          }}
+        >
+          <Svg width={fireR * 2.8} height={fireR * 2.8}>
+            <Defs>
+              <RadialGradient id="plume" cx="50%" cy="45%" r="50%">
+                <Stop offset="0" stopColor="#FFFFFF" stopOpacity="0.95" />
+                <Stop offset="0.2" stopColor={look.fire[1]} stopOpacity="0.9" />
+                <Stop offset="0.55" stopColor={look.fire[2]} stopOpacity="0.55" />
+                <Stop offset="0.8" stopColor="#3A2A2A" stopOpacity="0.35" />
+                <Stop offset="1" stopColor="#3A2A2A" stopOpacity="0" />
+              </RadialGradient>
+            </Defs>
+            <Circle cx={fireR * 1.4} cy={fireR * 1.4} r={fireR * 1.4} fill="url(#plume)" />
+          </Svg>
+        </Animated.View>
+      )}
+
       {/* Flash. */}
-      <Animated.View style={[StyleSheet.absoluteFill, styles.flash, { opacity: flash.interpolate({ inputRange: [0, 1], outputRange: [0, 0.85] }) }]} />
+      <Animated.View style={[StyleSheet.absoluteFill, styles.flash, { opacity: flash.interpolate({ inputRange: [0, 1], outputRange: [0, cine ? 1 : 0.85] }) }]} />
     </Animated.View>
   );
 }

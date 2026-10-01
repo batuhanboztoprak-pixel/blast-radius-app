@@ -1,3 +1,4 @@
+import { setAudioModeAsync, useAudioPlayer } from 'expo-audio';
 import { Redirect, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -9,7 +10,8 @@ import { AftermathTimeline, StageCaption } from '../components/AftermathTimeline
 import { TINT_COLOR, stageLayers } from '../components/aftermathLayers';
 import { GlobeView } from '../components/GlobeView';
 import { GLOBE_AVAILABLE_ABOVE_M, GLOBE_DEFAULT_ABOVE_M } from '../components/globe';
-import { ImpactMap } from '../components/ImpactMap';
+import { CinematicHud, type CinePhase } from '../components/CinematicHud';
+import { CINE_FALL, ImpactMap } from '../components/ImpactMap';
 import { RingLegend } from '../components/RingLegend';
 import { BackIcon, LockIcon, ShareIcon } from '../components/icons';
 import { visibleRings } from '../components/rings';
@@ -38,6 +40,10 @@ import { useUpsell } from '../upsell/upsell';
 import { colors, fonts, radius } from '../theme';
 
 const ringRadius = (rings: Ring[], kind: Ring['kind']) => rings.find((r) => r.kind === kind);
+
+const WHOOSH = require('../../assets/sounds/whoosh.m4a');
+const BOOM = require('../../assets/sounds/boom.m4a');
+const RUMBLE = require('../../assets/sounds/rumble.m4a');
 
 export default function Result() {
   const { result, location, presetId } = useSimulation();
@@ -69,6 +75,16 @@ export default function Result() {
   useEffect(() => {
     if (!isPro && aftermathTicket) unlockForRun('aftermath');
   }, [isPro, aftermathTicket, unlockForRun]);
+
+  // Cinematic strike: heads-up display state and sound players.
+  const [cine, setCine] = useState<{ phase: CinePhase; at: number } | null>(null);
+  const whoosh = useAudioPlayer(WHOOSH);
+  const boom = useAudioPlayer(BOOM);
+  const rumble = useAudioPlayer(RUMBLE);
+  useEffect(() => {
+    // Respect the silent switch and never stop the user's music.
+    setAudioModeAsync({ playsInSilentMode: false, interruptionMode: 'mixWithOthers' }).catch(() => {});
+  }, []);
 
   if (!result || !location) return <Redirect href="/" />;
 
@@ -127,7 +143,27 @@ export default function Result() {
     setStageId('blast');
   };
   const tint = layers.tint !== 'none' ? TINT_COLOR[layers.tint] : null;
+  // --- Cinematic strike: heads-up display and sound -------------------------
+  const onCinematicPhase = (phase: CinePhase) => {
+    setCine({ phase, at: Date.now() });
+    try {
+      if (phase === 'fall') {
+        whoosh.seekTo(0);
+        whoosh.play();
+      } else if (phase === 'impact') {
+        whoosh.pause();
+        boom.seekTo(0);
+        boom.play();
+        rumble.seekTo(0);
+        setTimeout(() => rumble.play(), 220);
+      }
+    } catch {
+      // Sound is a nice-to-have; never let it break the strike.
+    }
+  };
+
   const replay = () => {
+    setCine(null);
     setFocus(null);
     closeStage();
     setView('map');
@@ -166,6 +202,19 @@ export default function Result() {
                 onLockedPress={() => openBurns('burns-tag')}
                 cinematic={cinematic}
                 composition={result.params.composition}
+                onCinematicPhase={onCinematicPhase}
+              />
+              <CinematicHud
+                phase={cine?.phase ?? null}
+                since={cine?.at ?? 0}
+                fallMs={CINE_FALL}
+                velocityMs={result.params.velocityMs}
+                angleDeg={result.params.angleDeg}
+                airburstAltitudeM={result.airburstAltitudeM}
+                energyMt={result.effectiveEnergyMt}
+                deaths={world.lastStrike?.impact.totalDeaths ?? 0}
+                units={units}
+                top={insets.top + 100}
               />
               {stageOpen && strikeDone ? (
                 <StageCaption

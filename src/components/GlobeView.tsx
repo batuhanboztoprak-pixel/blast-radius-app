@@ -31,7 +31,7 @@ interface Props {
 
 /** Degrees the globe turns per point dragged, at zoom 1. */
 const DRAG_DEG_PER_PX = 0.35;
-const MAX_ZOOM = 6;
+const MAX_ZOOM = 10;
 const KM_PER_DEG = 111.195;
 const RAD = Math.PI / 180;
 
