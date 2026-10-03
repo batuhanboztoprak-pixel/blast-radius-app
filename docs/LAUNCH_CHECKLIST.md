@@ -1,5 +1,7 @@
 # Launch checklist
 
+> **Submitting now? Follow [APP_STORE_SUBMISSION.md](APP_STORE_SUBMISSION.md) step by step.** This file keeps the background and the on-device test list.
+
 These steps happen outside the codebase. Placeholders in code are marked in
 `src/config.ts` and `app.json`.
 
@@ -10,11 +12,11 @@ These steps happen outside the codebase. Placeholders in code are marked in
 - [ ] Sign the **Paid Apps** agreement and add banking/tax info. IAP won't load products without it.
 - [ ] Create an **In-App Purchase → Non-Consumable**:
   - Product ID: `com.blastradius.app.pro` (must match `PRO_PRODUCT_ID` in `src/config.ts`)
-  - Price: $3.99 tier
+  - Price: $4.99 (launch price $2.99 for the first two weeks)
   - Display name "Blast Radius Pro", a description, and a review screenshot of the paywall
 - [ ] Attach the IAP to the first app version you submit. The first IAP has to be reviewed with a binary.
 - [ ] Create a Sandbox tester (Users and Access → Sandbox) to test purchase and restore on device.
-- [ ] Add a Privacy Policy URL. It's required, and it has to mention AdMob and ATT.
+- [ ] Add the Privacy Policy URL `https://blastradius.curfewapp.co/privacy.html` (pages in `site/`, published from the `gh-pages` branch; it covers AdMob and ATT).
 
 ## 2. AdMob
 
@@ -65,7 +67,7 @@ npx eas-cli@latest build --profile production --platform ios
 npx eas-cli@latest submit --platform ios
 ```
 
-- [ ] Replace `assets/icon.png` and `assets/splash-icon.png`. They're still the Expo template art.
+- [x] App icon and splash are the final Blast Radius art.
 - [ ] Screenshots: five images at 6.9" and 6.5" with the captions from `store/listing.json` (English and Turkish at least; see docs/LOCALIZATION.md). Paste each language's name, subtitle, keywords and description from the same file.
 - [ ] Age rating questionnaire: the app now shows estimated casualty numbers (no imagery of people). "None" still fits most questions, but read the violence items carefully; if in doubt, "Infrequent/Mild Realistic Violence" is the safe answer.
 - [ ] Review notes: "Pro unlock is a non-consumable IAP; use the sandbox account to test. Physics are the published Earth Impact Effects Program equations."

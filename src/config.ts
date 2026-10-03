@@ -45,8 +45,11 @@ export const INTERSTITIAL_EVERY_N_SIMULATIONS = 3;
 export const INTERSTITIAL_MIN_INTERVAL_MS = 90_000;
 
 /** Public privacy policy (also entered in App Store Connect). Must mention AdMob and tracking. */
-export const PRIVACY_POLICY_URL = 'https://batuhanboztoprak-pixel.github.io/blast-radius/privacy.html';
+export const PRIVACY_POLICY_URL = 'https://blastradius.curfewapp.co/privacy.html';
 /** Support page (App Store Connect "Support URL"). */
-export const SUPPORT_URL = 'https://batuhanboztoprak-pixel.github.io/blast-radius/';
+export const SUPPORT_URL = 'https://blastradius.curfewapp.co/';
 /** One-time purchases use Apple's standard licence agreement. */
 export const TERMS_URL = 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
+
+/** Support email shown on the website and in App Store Connect. */
+export const SUPPORT_EMAIL = 'blastradius@curfewapp.co';
