@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import { TestIds } from 'react-native-google-mobile-ads';
 
-/** Non-consumable product created in App Store Connect ($3.99 tier). */
+/** Non-consumable product created in App Store Connect ($4.99; $2.99 launch price). */
 export const PRO_PRODUCT_ID = 'com.blastradius.app.pro';
 
 /**
@@ -24,6 +24,14 @@ const PROD_AD_UNITS = {
 
 const platformUnits = Platform.OS === 'android' ? PROD_AD_UNITS.android : PROD_AD_UNITS.ios;
 
+/**
+ * False while the production ad unit IDs above are still placeholders. A
+ * release build then runs completely ad-free: no consent form, no tracking
+ * prompt, no ad SDK start-up, and the paywall doesn't promise "no ads".
+ * Dev builds always use Google's test ads.
+ */
+export const ADS_CONFIGURED = __DEV__ || !Object.values(platformUnits).some((id) => id.includes('XXXX'));
+
 export const AD_UNITS = {
   banner: __DEV__ ? TestIds.ADAPTIVE_BANNER : platformUnits.banner,
   interstitial: __DEV__ ? TestIds.INTERSTITIAL : platformUnits.interstitial,
@@ -35,3 +43,13 @@ export const AD_UNITS = {
 export const INTERSTITIAL_EVERY_N_SIMULATIONS = 3;
 /** And never more often than this. */
 export const INTERSTITIAL_MIN_INTERVAL_MS = 90_000;
+
+/** Public privacy policy (also entered in App Store Connect). Must mention AdMob and tracking. */
+export const PRIVACY_POLICY_URL = 'https://blastradius.curfewapp.co/privacy.html';
+/** Support page (App Store Connect "Support URL"). */
+export const SUPPORT_URL = 'https://blastradius.curfewapp.co/';
+/** One-time purchases use Apple's standard licence agreement. */
+export const TERMS_URL = 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
+
+/** Support email shown on the website and in App Store Connect. */
+export const SUPPORT_EMAIL = 'blastradius@curfewapp.co';

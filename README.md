@@ -20,7 +20,7 @@ Built with Expo (SDK 57) + React Native. Maps are Apple MapKit via `react-native
 
 ## Free vs Pro
 
-| | Free | Pro ($3.99 one-time, `com.blastradius.app.pro`) |
+| | Free | Pro ($4.99 one-time, `com.blastradius.app.pro`) |
 | --- | --- | --- |
 | Simulations | Unlimited | Unlimited |
 | Composition | Rock | Rock, iron, comet |
@@ -47,6 +47,8 @@ docs/
   PHYSICS.md          equations, constants and known limitations
   LOCALIZATION.md     languages, translation files, App Store listings (store/listing.json)
   LAUNCH_CHECKLIST.md AdMob / App Store Connect / privacy steps
+  APP_STORE_SUBMISSION.md step-by-step submission guide
+site/             the support + privacy website (published from the gh-pages branch to blastradius.curfewapp.co)
 ```
 
 ## Upgrade prompts

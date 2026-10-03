@@ -43,7 +43,7 @@ export function StageEffects({ width, height, center, pxPerM, effect, reduceMoti
   const innerPx = effect.innerM ? Math.min(effect.innerM * pxPerM, MAX_PX) : null;
 
   const particles = useMemo<Particle[]>(() => {
-    const count = { fireball: 0, shock: 0, debris: 70, embers: 60, dust: 22, snow: 60 }[effect.kind];
+    const count = { fireball: 0, shock: 0, debris: 70, embers: 60, dust: 22, snow: 70 }[effect.kind];
     // A point spread evenly over a disc (or the whole map when radius is null),
     // kept inside the visible map so none are wasted off-screen when the zone is
     // bigger than the view.
@@ -67,7 +67,10 @@ export function StageEffects({ width, height, center, pxPerM, effect, reduceMoti
     return Array.from({ length: count }, (_, i) => {
       const k = effect.kind;
       const inner = k === 'debris' && innerPx !== null && innerPx > 6 && i % 5 < 3; // most debris lands near the crater
-      const p = place(i + 1, inner ? innerPx : radiusPx);
+      // Dust clouds are big blobs: keep them (and their drift) inside the ring.
+      const dustSize = radiusPx === null ? 60 + rand(i + 7) * 90 : Math.min(60 + rand(i + 7) * 90, radiusPx * 0.6);
+      const zone = inner ? innerPx : radiusPx;
+      const p = place(i + 1, zone === null ? null : k === 'dust' ? Math.max(zone - dustSize / 2 - 30, 4) : k === 'snow' ? Math.max(zone - 20, 4) : zone);
       // Bright colours: the map underneath is dark.
       const palette =
         k === 'debris'
@@ -81,7 +84,7 @@ export function StageEffects({ width, height, center, pxPerM, effect, reduceMoti
         ...p,
         size:
           k === 'dust'
-            ? 60 + rand(i + 7) * 90
+            ? dustSize
             : k === 'snow'
               ? 3 + rand(i + 7) * 4
               : k === 'embers'
@@ -110,7 +113,7 @@ export function StageEffects({ width, height, center, pxPerM, effect, reduceMoti
           <Pulse key={i} cx={center.x} cy={center.y} r={Math.min(Math.max(radiusPx, 30), diag)} delay={i * 800} still={reduceMotion} />
         ))}
       {(effect.kind === 'debris' || effect.kind === 'embers' || effect.kind === 'dust' || effect.kind === 'snow') &&
-        particles.map((p, i) => <Mote key={i} p={p} kind={effect.kind} height={height} still={reduceMotion} />)}
+        particles.map((p, i) => <Mote key={i} p={p} kind={effect.kind} still={reduceMotion} />)}
     </Animated.View>
   );
 }
@@ -183,12 +186,10 @@ function Pulse({ cx, cy, r, delay, still }: { cx: number; cy: number; r: number;
 function Mote({
   p,
   kind,
-  height,
   still,
 }: {
   p: Particle;
   kind: StageEffect['kind'];
-  height: number;
   still: boolean;
 }) {
   const v = useLoop(p.duration, p.delay, still);
@@ -214,15 +215,15 @@ function Mote({
           ? {
               opacity: v.interpolate({ inputRange: [0, 0.3, 0.7, 1], outputRange: [0, 0.8, 0.8, 0] }),
               transform: [
-                { translateX: v.interpolate({ inputRange: [0, 1], outputRange: [-40 * p.drift - 20, 40 * p.drift + 20] }) },
+                { translateX: v.interpolate({ inputRange: [0, 1], outputRange: [-14 * p.drift - 10, 14 * p.drift + 10] }) },
               ],
             }
           : {
-              // Snow falls across the whole map, drifting sideways.
-              opacity: 0.9,
+              // Snow drifts down a little inside the ring, fading in and out.
+              opacity: v.interpolate({ inputRange: [0, 0.2, 0.8, 1], outputRange: [0, 0.95, 0.95, 0] }),
               transform: [
-                { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [-p.y - 20, height - p.y + 20] }) },
-                { translateX: v.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, p.drift * 14, 0] }) },
+                { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [-18, 18] }) },
+                { translateX: v.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, p.drift * 8, 0] }) },
               ],
             };
   return (

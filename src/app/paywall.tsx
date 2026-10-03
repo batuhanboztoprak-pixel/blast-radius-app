@@ -1,10 +1,11 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAds } from '../ads/ads';
 import { PaywallArt } from '../components/PaywallArt';
+import { ADS_CONFIGURED, PRIVACY_POLICY_URL, TERMS_URL } from '../config';
 import { CheckIcon, CloseIcon } from '../components/icons';
 import { IconButton, PrimaryButton, SecondaryButton } from '../components/ui';
 import { t, type MessageKey } from '../i18n/core';
@@ -30,7 +31,10 @@ const PERKS: Record<Feature, { title: MessageKey; body: MessageKey }> = {
   aftermath: { title: 'paywall.aftermath', body: 'paywall.aftermathBody' },
   ads: { title: 'paywall.noAds', body: 'paywall.noAdsBody' },
 };
-const PERK_ORDER: Feature[] = ['cinematic', 'aftermath', 'ads', 'compositions', 'burns', 'presets'];
+// "No ads" is only a perk when the free version actually shows ads.
+const PERK_ORDER: Feature[] = (['cinematic', 'aftermath', 'ads', 'compositions', 'burns', 'presets'] as Feature[]).filter(
+  (f) => f !== 'ads' || ADS_CONFIGURED,
+);
 
 /** Free vs Pro rows. `true` = included, `false` = not, a key = short text. */
 const COMPARE: { row: MessageKey; free: boolean | MessageKey; pro: boolean | MessageKey }[] = [
@@ -44,7 +48,7 @@ const COMPARE: { row: MessageKey; free: boolean | MessageKey; pro: boolean | Mes
   { row: 'compare.burns', free: false, pro: true },
   { row: 'compare.presets', free: 'compare.presetsFree', pro: true },
   { row: 'compare.ads', free: 'compare.adsFree', pro: 'compare.adsPro' },
-];
+].filter((r) => r.row !== 'compare.ads' || ADS_CONFIGURED);
 
 export default function Paywall() {
   const params = useLocalSearchParams<{ feature?: string; item?: string; source?: string }>();
@@ -87,7 +91,7 @@ export default function Paywall() {
     router.back();
   }
 
-  const hero = feature ?? 'burns';
+  const hero = feature === 'ads' && !ADS_CONFIGURED ? 'cinematic' : (feature ?? 'burns');
   const perks = feature ? [feature, ...PERK_ORDER.filter((f) => f !== feature)] : PERK_ORDER;
   const title = feature ? t(`paywall.hero.${feature}.title`) : t('paywall.title');
   const subtitle = feature ? t(`paywall.hero.${feature}.body`) : t('paywall.subtitle');
@@ -140,6 +144,7 @@ export default function Paywall() {
         </View>
 
         {error && <Text style={styles.error}>{error}</Text>}
+        {!price && !busy && !isPro && <Text style={styles.storeNote}>{t('paywall.storeLoading')}</Text>}
         {rewardNote && <Text style={styles.error}>{rewardNote}</Text>}
       </ScrollView>
 
@@ -166,6 +171,16 @@ export default function Paywall() {
               <Text style={styles.link}>{t('paywall.privacy')}</Text>
             </Pressable>
           )}
+        </View>
+        {/* One-time purchase: Apple's standard licence applies; the privacy policy must be reachable in-app. */}
+        <Text style={styles.legal}>{t('paywall.legal')}</Text>
+        <View style={styles.links}>
+          <Pressable onPress={() => Linking.openURL(TERMS_URL)} accessibilityRole="link" hitSlop={8}>
+            <Text style={styles.smallLink}>{t('paywall.terms')}</Text>
+          </Pressable>
+          <Pressable onPress={() => Linking.openURL(PRIVACY_POLICY_URL)} accessibilityRole="link" hitSlop={8}>
+            <Text style={styles.smallLink}>{t('paywall.privacyPolicy')}</Text>
+          </Pressable>
         </View>
       </View>
     </SafeAreaView>
@@ -229,5 +244,8 @@ const styles = StyleSheet.create({
   footer: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 12, gap: 10 },
   links: { flexDirection: 'row', justifyContent: 'center', gap: 24, marginTop: 4 },
   triesLeft: { fontSize: 12, color: colors.muted, fontFamily: fonts.body, textAlign: 'center' },
+  legal: { color: colors.dim, fontSize: 11, fontFamily: fonts.body, textAlign: 'center', marginTop: 6 },
+  smallLink: { color: colors.dim, fontSize: 11, fontFamily: fonts.bodyMedium, textDecorationLine: 'underline' },
+  storeNote: { marginTop: 12, color: colors.muted, fontFamily: fonts.body, fontSize: 12 },
   link: { color: colors.muted, fontSize: 13, fontFamily: fonts.bodyMedium, textDecorationLine: 'underline' },
 });

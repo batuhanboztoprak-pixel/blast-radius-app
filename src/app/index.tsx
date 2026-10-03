@@ -5,6 +5,8 @@ import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Keyboard,
+  Linking,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -16,9 +18,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AdBanner } from '../ads/AdBanner';
 import { LocateIcon, SearchIcon } from '../components/icons';
 import { IconButton, PrimaryButton, StepHeader } from '../components/ui';
+import { PRIVACY_POLICY_URL } from '../config';
 import { t } from '../i18n/core';
 import { formatCoords } from '../lib/geo';
+import { usePremium } from '../state/premium';
 import { useSimulation, type ImpactLocation } from '../state/simulation';
+import { useUpsell } from '../upsell/upsell';
 import { colors, fonts, radius } from '../theme';
 
 const WORLD = { latitude: 30, longitude: 15, latitudeDelta: 100, longitudeDelta: 100 };
@@ -32,6 +37,8 @@ function labelFor(a: Location.LocationGeocodedAddress | undefined, lat: number, 
 
 export default function PickLocation() {
   const { location, setLocation } = useSimulation();
+  const { isPro } = usePremium();
+  const upsell = useUpsell();
   const map = useRef<MapView>(null);
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
@@ -172,6 +179,20 @@ export default function PickLocation() {
           disabled={!location}
           onPress={() => router.push('/asteroid')}
         />
+        {/* Always-reachable Pro (with restore) and privacy policy. */}
+        <View style={styles.links}>
+          <Pressable
+            onPress={() => !isPro && upsell.openPaywall('cinematic', 'home-link')}
+            disabled={isPro}
+            accessibilityRole="button"
+            hitSlop={8}
+          >
+            <Text style={[styles.link, !isPro && styles.linkPro]}>{isPro ? t('home.proActive') : t('home.getPro')}</Text>
+          </Pressable>
+          <Pressable onPress={() => Linking.openURL(PRIVACY_POLICY_URL)} accessibilityRole="link" hitSlop={8}>
+            <Text style={styles.link}>{t('paywall.privacyPolicy')}</Text>
+          </Pressable>
+        </View>
       </View>
       <AdBanner />
     </SafeAreaView>
@@ -227,5 +248,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderWidth: 1,
   },
-  footer: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16 },
+  footer: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12, gap: 12 },
+  links: { flexDirection: 'row', justifyContent: 'center', gap: 24 },
+  link: { color: colors.dim, fontSize: 12, fontFamily: fonts.bodyMedium },
+  linkPro: { color: colors.accent },
 });

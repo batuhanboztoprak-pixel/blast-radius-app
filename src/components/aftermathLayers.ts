@@ -46,13 +46,16 @@ export const TINT_COLOR: Record<Exclude<StageTint, 'none'>, { color: string; opa
 
 const factDist = (s: Stage, key: string) => s.facts.find((f) => f.key === key)?.dist;
 
+/** The largest damage ring (window breakage), the zone the later stages are drawn in. */
+const outerRing = (r: ImpactResult, crater: number) =>
+  r.rings.find((x) => x.kind === 'windows')?.radiusM ?? r.rings[0]?.radiusM ?? Math.max(crater * 20, 5000);
+
 export function stageLayers(stage: Stage | undefined, r: ImpactResult): StageLayers {
   if (!stage) return NONE;
   const crater = r.craterDiameterM ? r.craterDiameterM / 2 : 0;
   const craterCircle: StageCircle[] = crater
     ? [{ key: 'crater', radiusM: crater, fill: 'rgba(255,107,74,0.55)', stroke: 'rgba(255,107,74,1)' }]
     : [];
-  const global = stage.facts.some((f) => f.key.endsWith('.global'));
 
   switch (stage.id) {
     case 'impact': {
@@ -81,37 +84,44 @@ export function stageLayers(stage: Stage | undefined, r: ImpactResult): StageLay
       return {
         circles: [...circles, ...craterCircle],
         hideRings: true,
-        tint: global ? 'fire' : 'none',
+        tint: 'none',
         extentM: dust ?? deep ?? null,
         effect: { kind: 'debris', radiusM: dust ?? deep ?? crater, innerM: deep },
       };
     }
+    // Every later stage stays inside its own ring on the map, even when the
+    // real effect goes worldwide (the caption and the banner say so).
     case 'fires': {
       const burns = r.rings.find((x) => x.kind === 'thermal')?.radiusM;
-      const circles: StageCircle[] = burns
-        ? [{ key: 'fires', radiusM: burns, fill: 'rgba(255,90,40,0.42)', stroke: 'rgba(255,140,60,0.95)' }]
-        : [];
+      if (!burns) return NONE;
       return {
-        circles,
+        circles: [{ key: 'fires', radiusM: burns, fill: 'rgba(255,90,40,0.42)', stroke: 'rgba(255,140,60,0.95)' }],
         hideRings: true,
-        tint: global ? 'fire' : 'none',
-        extentM: burns ?? null,
-        effect: { kind: 'embers', radiusM: global ? null : (burns ?? null) },
+        tint: 'none',
+        extentM: burns,
+        effect: { kind: 'embers', radiusM: burns },
       };
     }
     case 'sky': {
-      if (global) return { circles: [], hideRings: true, tint: 'dark', extentM: null, effect: { kind: 'dust', radiusM: null } };
-      const windows = r.rings.find((x) => x.kind === 'windows')?.radiusM ?? crater * 20;
+      const radiusM = outerRing(r, crater);
       return {
-        circles: [{ key: 'dustcloud', radiusM: windows * 1.2, fill: 'rgba(40,40,46,0.55)', stroke: 'rgba(120,120,130,0.6)' }],
+        circles: [{ key: 'dustcloud', radiusM, fill: 'rgba(40,40,46,0.6)', stroke: 'rgba(120,120,130,0.7)' }],
         hideRings: true,
         tint: 'none',
-        extentM: windows * 1.3,
-        effect: { kind: 'dust', radiusM: windows * 1.2 },
+        extentM: radiusM * 1.08,
+        effect: { kind: 'dust', radiusM },
       };
     }
-    case 'climate':
-      return { circles: [], hideRings: true, tint: 'frost', extentM: null, effect: { kind: 'snow', radiusM: null } };
+    case 'climate': {
+      const radiusM = outerRing(r, crater);
+      return {
+        circles: [{ key: 'frost', radiusM, fill: 'rgba(207,230,255,0.32)', stroke: 'rgba(207,230,255,0.85)' }],
+        hideRings: true,
+        tint: 'none',
+        extentM: radiusM * 1.08,
+        effect: { kind: 'snow', radiusM },
+      };
+    }
     default:
       return NONE;
   }

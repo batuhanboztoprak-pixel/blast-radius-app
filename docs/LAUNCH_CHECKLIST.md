@@ -1,5 +1,7 @@
 # Launch checklist
 
+> **Submitting now? Follow [APP_STORE_SUBMISSION.md](APP_STORE_SUBMISSION.md) step by step.** This file keeps the background and the on-device test list.
+
 These steps happen outside the codebase. Placeholders in code are marked in
 `src/config.ts` and `app.json`.
 
@@ -10,11 +12,11 @@ These steps happen outside the codebase. Placeholders in code are marked in
 - [ ] Sign the **Paid Apps** agreement and add banking/tax info. IAP won't load products without it.
 - [ ] Create an **In-App Purchase → Non-Consumable**:
   - Product ID: `com.blastradius.app.pro` (must match `PRO_PRODUCT_ID` in `src/config.ts`)
-  - Price: $3.99 tier
+  - Price: $4.99 (launch price $2.99 for the first two weeks)
   - Display name "Blast Radius Pro", a description, and a review screenshot of the paywall
 - [ ] Attach the IAP to the first app version you submit. The first IAP has to be reviewed with a binary.
 - [ ] Create a Sandbox tester (Users and Access → Sandbox) to test purchase and restore on device.
-- [ ] Add a Privacy Policy URL. It's required, and it has to mention AdMob and ATT.
+- [ ] Add the Privacy Policy URL `https://blastradius.curfewapp.co/privacy.html` (pages in `site/`, published from the `gh-pages` branch; it covers AdMob and ATT).
 
 ## 2. AdMob
 
@@ -65,7 +67,7 @@ npx eas-cli@latest build --profile production --platform ios
 npx eas-cli@latest submit --platform ios
 ```
 
-- [ ] Replace `assets/icon.png` and `assets/splash-icon.png`. They're still the Expo template art.
+- [x] App icon and splash are the final Blast Radius art.
 - [ ] Screenshots: five images at 6.9" and 6.5" with the captions from `store/listing.json` (English and Turkish at least; see docs/LOCALIZATION.md). Paste each language's name, subtitle, keywords and description from the same file.
 - [ ] Age rating questionnaire: the app now shows estimated casualty numbers (no imagery of people). "None" still fits most questions, but read the violence items carefully; if in doubt, "Infrequent/Mild Realistic Violence" is the safe answer.
 - [ ] Review notes: "Pro unlock is a non-consumable IAP; use the sandbox account to test. Physics are the published Earth Impact Effects Program equations."
@@ -81,7 +83,7 @@ release builds.
 - [ ] Cinematic extras: during the ~3 s fall a panel shows altitude, speed and a real countdown to impact ("AIRBURST IN" for Chelyabinsk/Tunguska); a whoosh builds up; impact = blinding flash, boom, a fireball plume rising, half a second of slow motion, the phone keeps rumbling; energy and deaths roll up in the panel, which fades when the camera settles. With the silent switch on there is no sound; music from other apps keeps playing.
 - [ ] Reduce Motion on: no camera moves, rings appear directly.
 - [ ] Aftermath timeline: tap each stage. Free users can read the first two; the others show the lock and open the paywall on the timeline. A small impact (25 m) shows only two stages ending with "no lasting effects". Chicxulub shows the impact winter with the Brugger et al. source line. Imperial units show °F and mi².
-- [ ] Aftermath on the map: tapping a stage scrolls up to the map and shows that stage's text in a caption on the map (‹ › to step, ✕ to close), so there is no need to scroll back down. Each stage animates on the map, lined up with the impact: fireball pulse, shock pulses, debris raining into the ejecta zone, embers in the burning area, drifting dust, snow for the impact winter. The particles hide while the map moves and come back when it stops. Check all six stages on Chicxulub (continent-sized zones) and on a 450 m impact: every stage must show its own particles inside the visible map, and the general red haze disappears while a stage is open.
+- [ ] Aftermath on the map: tapping a stage scrolls up to the map and shows that stage's text in a caption on the map (‹ › to step, ✕ to close), so there is no need to scroll back down. Each stage animates on the map, lined up with the impact and kept inside its own ring: fireball pulse, shock pulses out to the window ring, debris in the ejecta zone, embers in the burns ring, dark dust and the frost/snow of the impact winter inside the outer ring. The map is never tinted all over. The particles hide while the map moves and come back when it stops. Check all six stages on Chicxulub (continent-sized zones) and on a 450 m impact: every stage must show its own particles inside the visible map, and the general red haze disappears while a stage is open.
 - [ ] Share card: nothing is cut off at the bottom (try a long place name, German, and the largest iOS text size); the wordmark is at the top.
 - [ ] Chicxulub shows "🦖 Dinosaur killer" under its chip and on the result card.
 - [ ] Famous strikes: tapping the selected preset again deselects it and restores the asteroid you had before.
