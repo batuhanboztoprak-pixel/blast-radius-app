@@ -37,7 +37,8 @@ const PERK_ORDER: Feature[] = (['cinematic', 'aftermath', 'ads', 'compositions',
 );
 
 /** Free vs Pro rows. `true` = included, `false` = not, a key = short text. */
-const COMPARE: { row: MessageKey; free: boolean | MessageKey; pro: boolean | MessageKey }[] = [
+type CompareRow = { row: MessageKey; free: boolean | MessageKey; pro: boolean | MessageKey };
+const ALL_COMPARE: CompareRow[] = [
   { row: 'compare.anything', free: true, pro: true },
   { row: 'compare.rock', free: true, pro: true },
   { row: 'compare.rings', free: true, pro: true },
@@ -48,7 +49,8 @@ const COMPARE: { row: MessageKey; free: boolean | MessageKey; pro: boolean | Mes
   { row: 'compare.burns', free: false, pro: true },
   { row: 'compare.presets', free: 'compare.presetsFree', pro: true },
   { row: 'compare.ads', free: 'compare.adsFree', pro: 'compare.adsPro' },
-].filter((r) => r.row !== 'compare.ads' || ADS_CONFIGURED);
+];
+const COMPARE = ALL_COMPARE.filter((r) => r.row !== 'compare.ads' || ADS_CONFIGURED);
 
 export default function Paywall() {
   const params = useLocalSearchParams<{ feature?: string; item?: string; source?: string }>();
