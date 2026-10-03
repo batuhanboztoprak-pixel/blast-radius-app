@@ -164,3 +164,20 @@ export function formatTempDrop(celsius: number, units: Units = 'metric'): string
 export function compositionLabel(c: Composition): string {
   return t(`composition.${c}`);
 }
+
+/** ISO date → "6 Oct" (adds the year when it isn't this year), in the user's locale. */
+export function formatShortDate(iso: string, now: Date = new Date()): string {
+  const d = new Date(iso);
+  const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' };
+  if (d.getUTCFullYear() !== now.getUTCFullYear()) opts.year = 'numeric';
+  try {
+    return new Intl.DateTimeFormat(getNumberLocale(), { ...opts, timeZone: 'UTC' }).format(d);
+  } catch {
+    return iso.slice(0, 10);
+  }
+}
+
+/** Distance in Moon distances: "0.12" below 1, "4.1" above. */
+export function formatLd(ld: number): string {
+  return ld < 1 ? dec(ld, 2) : dec(ld, 1);
+}

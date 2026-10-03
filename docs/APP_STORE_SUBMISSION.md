@@ -152,7 +152,8 @@ In a TestFlight build, buy Pro (it's free in sandbox), delete the app, reinstall
   > purchase" is on the same screen.
   > The free version shows Google AdMob ads; the tracking prompt appears once before
   > ads load, and Pro removes ads. Location is optional (locate button) and never
-  > leaves the device.
+  > leaves the device. The "Today's real asteroid" card downloads NASA/JPL's public
+  > close-approach list (no personal data sent); the full list of upcoming asteroids is Pro.
   > Physics: Earth Impact Effects Program equations (Collins, Melosh & Marcus 2005);
   > population: NASA SEDAC GPWv4. Casualty figures are estimates for education.
 

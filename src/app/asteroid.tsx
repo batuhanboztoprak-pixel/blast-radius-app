@@ -14,6 +14,8 @@ import {
   compositionLabel,
   formatDiameter,
   formatEnergyMt,
+  formatLd,
+  formatShortDate,
   formatSpeed,
   formatSpeedPerHour,
   type Units,
@@ -28,7 +30,7 @@ import { useUnits } from '../state/units';
 import { useWorld } from '../state/world';
 import { freeFallback, planSimulation, type LockedItem } from '../upsell/entitlements';
 import { useUpsell } from '../upsell/upsell';
-import { colors, fonts } from '../theme';
+import { colors, fonts, radius } from '../theme';
 
 const MIN_DIAMETER = 10;
 const MAX_DIAMETER = 20_000;
@@ -50,7 +52,7 @@ const fromSlider = (v: number) => {
 const COMPOSITIONS: Composition[] = ['comet', 'rock', 'iron'];
 
 export default function SetAsteroid() {
-  const { params, updateParams, presetId, applyPreset, clearPreset, presetEpoch, result, location } = useSimulation();
+  const { params, updateParams, presetId, applyPreset, clearPreset, presetEpoch, result, location, realAsteroid } = useSimulation();
   const { isPro } = usePremium();
   const upsell = useUpsell();
   const { onSimulation, dismissNudge } = useAds();
@@ -139,6 +141,14 @@ export default function SetAsteroid() {
       />
 
       <ScrollView contentContainerStyle={styles.body}>
+        {realAsteroid && (
+          <View style={styles.realNote}>
+            <Text style={styles.realTitle}>☄️ {t('real.noteTitle', { name: realAsteroid.name })}</Text>
+            <Text style={styles.note}>
+              {t('real.noteBody', { date: formatShortDate(realAsteroid.approachAt), ld: formatLd(realAsteroid.distanceLd) })}
+            </Text>
+          </View>
+        )}
         <View style={styles.group}>
           <View style={styles.row}>
             <Text style={styles.label}>{t('asteroid.diameter')}</Text>
@@ -313,6 +323,8 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   flexChip: { flexGrow: 1, flexBasis: 0 },
   note: { fontSize: 12, color: colors.muted, fontFamily: fonts.body },
+  realNote: { borderColor: colors.accent, borderWidth: 1, borderRadius: radius.md, padding: 12, gap: 4 },
+  realTitle: { fontSize: 14, color: colors.text, fontFamily: fonts.bodySemi },
   unitsRow: { alignItems: 'center' },
   compHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   compText: { flex: 1, gap: 2 },

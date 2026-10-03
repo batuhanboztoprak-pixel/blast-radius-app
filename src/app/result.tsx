@@ -23,8 +23,10 @@ import {
   dec,
   formatDistance,
   formatEnergyMt,
+  formatLd,
   formatMultiple,
   formatPeople,
+  formatShortDate,
   formatYears,
   hiroshimaPercent,
 } from '../physics/format';
@@ -46,7 +48,7 @@ const BOOM = require('../../assets/sounds/boom.m4a');
 const RUMBLE = require('../../assets/sounds/rumble.m4a');
 
 export default function Result() {
-  const { result, location, presetId } = useSimulation();
+  const { result, location, presetId, realAsteroid } = useSimulation();
   const { isPro, price } = usePremium();
   const { postAdNudge, dismissNudge } = useAds();
   const upsell = useUpsell();
@@ -400,6 +402,15 @@ export default function Result() {
             </Text>
             {presetId === 'chicxulub' && <Text style={styles.presetTag}>{t('preset.chicxulub.tag')}</Text>}
             <Text style={styles.noteText}>{preset.note}</Text>
+          </View>
+        )}
+
+        {realAsteroid && (
+          <View style={styles.noteCard}>
+            <Text style={styles.noteTitle}>☄️ {t('real.noteTitle', { name: realAsteroid.name })}</Text>
+            <Text style={styles.noteText}>
+              {t('real.resultBody', { date: formatShortDate(realAsteroid.approachAt), ld: formatLd(realAsteroid.distanceLd) })}
+            </Text>
           </View>
         )}
 

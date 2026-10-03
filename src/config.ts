@@ -53,3 +53,6 @@ export const TERMS_URL = 'https://www.apple.com/legal/internet-services/itunes/d
 
 /** Support email shown on the website and in App Store Connect. */
 export const SUPPORT_EMAIL = 'blastradius@curfewapp.co';
+
+/** AsyncStorage flag: the welcome cards have been seen (or skipped). */
+export const WELCOME_KEY = 'blast-radius:welcomed';

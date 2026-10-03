@@ -29,10 +29,11 @@ const PERKS: Record<Feature, { title: MessageKey; body: MessageKey }> = {
   presets: { title: 'paywall.presets', body: 'paywall.presetsBody' },
   cinematic: { title: 'paywall.cinematic', body: 'paywall.cinematicBody' },
   aftermath: { title: 'paywall.aftermath', body: 'paywall.aftermathBody' },
+  asteroids: { title: 'paywall.asteroids', body: 'paywall.asteroidsBody' },
   ads: { title: 'paywall.noAds', body: 'paywall.noAdsBody' },
 };
 // "No ads" is only a perk when the free version actually shows ads.
-const PERK_ORDER: Feature[] = (['cinematic', 'aftermath', 'ads', 'compositions', 'burns', 'presets'] as Feature[]).filter(
+const PERK_ORDER: Feature[] = (['cinematic', 'asteroids', 'aftermath', 'ads', 'compositions', 'burns', 'presets'] as Feature[]).filter(
   (f) => f !== 'ads' || ADS_CONFIGURED,
 );
 
@@ -45,6 +46,7 @@ const ALL_COMPARE: CompareRow[] = [
   { row: 'compare.population', free: true, pro: true },
   { row: 'compare.cinematic', free: 'compare.cinematicFree', pro: true },
   { row: 'compare.aftermath', free: 'compare.aftermathFree', pro: true },
+  { row: 'compare.asteroids', free: 'compare.asteroidsFree', pro: true },
   { row: 'compare.ironComet', free: false, pro: true },
   { row: 'compare.burns', free: false, pro: true },
   { row: 'compare.presets', free: 'compare.presetsFree', pro: true },

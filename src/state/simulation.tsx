@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 
 import { simulateImpact, type ImpactResult, type ImpactorParams } from '../physics/impact';
+import type { RealAsteroid } from '../physics/neo';
 import type { Preset } from '../physics/presets';
 
 export interface ImpactLocation {
@@ -28,7 +29,11 @@ interface SimulationState {
   applyPreset: (preset: Preset) => void;
   /** Leave the preset and go back to the custom asteroid the user had before it. */
   clearPreset: () => void;
-  /** Bumps whenever a preset is applied, so sliders can jump to its values. */
+  /** A real NASA asteroid loaded into the simulator, until the user edits it. */
+  realAsteroid: RealAsteroid | null;
+  /** Load a real asteroid's size and impact speed (rock, 45°). */
+  applyRealAsteroid: (asteroid: RealAsteroid) => void;
+  /** Bumps whenever a preset or real asteroid is applied, so sliders can jump to its values. */
   presetEpoch: number;
   result: ImpactResult | null;
 }
@@ -40,6 +45,7 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
   const [params, setParams] = useState<ImpactorParams>(DEFAULT_PARAMS);
   const [presetId, setPresetId] = useState<Preset['id'] | null>(null);
   const [presetEpoch, setPresetEpoch] = useState(0);
+  const [realAsteroid, setRealAsteroid] = useState<RealAsteroid | null>(null);
   /** The user's own asteroid, kept while a preset is active so it can be restored. */
   const [customParams, setCustomParams] = useState<ImpactorParams>(DEFAULT_PARAMS);
 
@@ -52,11 +58,13 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       params,
       updateParams: (patch) => {
         setPresetId(null);
+        setRealAsteroid(null);
         setParams((p) => ({ ...p, ...patch, angleDeg: DEFAULT_PARAMS.angleDeg }));
       },
       presetId,
       applyPreset: (preset) => {
-        if (!presetId) setCustomParams(params);
+        if (!presetId && !realAsteroid) setCustomParams(params);
+        setRealAsteroid(null);
         setPresetId(preset.id);
         setParams(preset.params);
         setPresetEpoch((n) => n + 1);
@@ -67,10 +75,18 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
         setParams({ ...customParams, angleDeg: DEFAULT_PARAMS.angleDeg });
         setPresetEpoch((n) => n + 1);
       },
+      realAsteroid,
+      applyRealAsteroid: (a) => {
+        if (!presetId && !realAsteroid) setCustomParams(params);
+        setPresetId(null);
+        setRealAsteroid(a);
+        setParams({ diameterM: a.diameterM, velocityMs: a.impactVelocityMs, composition: 'rock', angleDeg: DEFAULT_PARAMS.angleDeg });
+        setPresetEpoch((n) => n + 1);
+      },
       presetEpoch,
       result,
     }),
-    [location, params, presetId, presetEpoch, customParams, result],
+    [location, params, presetId, presetEpoch, customParams, realAsteroid, result],
   );
 
   return <SimulationContext.Provider value={value}>{children}</SimulationContext.Provider>;

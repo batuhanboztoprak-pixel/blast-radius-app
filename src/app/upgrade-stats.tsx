@@ -37,7 +37,7 @@ export default function UpgradeStatsScreen() {
             <Switch value={devPro} onValueChange={setDevPro} />
           </View>
           <Pressable onPress={resetForTesting} accessibilityRole="button">
-            <Text style={styles.resetText}>Reset free tries, cinematic taste, tickets and today’s ad count</Text>
+            <Text style={styles.resetText}>Reset free tries, cinematic taste, tickets, today’s ad count and the welcome cards</Text>
           </Pressable>
         </Section>
         <Section title={`${t('debug.opened')} → ${t('debug.purchased')}`}>

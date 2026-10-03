@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AdBanner } from '../ads/AdBanner';
 import { LocateIcon, SearchIcon } from '../components/icons';
+import { RealAsteroidCard } from '../components/RealAsteroidCard';
 import { IconButton, PrimaryButton, StepHeader } from '../components/ui';
 import { PRIVACY_POLICY_URL } from '../config';
 import { t } from '../i18n/core';
@@ -135,6 +136,10 @@ export default function PickLocation() {
         {searchError && <Text style={styles.searchError}>{searchError}</Text>}
       </View>
 
+      <View style={styles.realWrap}>
+        <RealAsteroidCard />
+      </View>
+
       <View style={styles.mapWrap}>
         <MapView
           ref={map}
@@ -214,6 +219,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   searchInput: { flex: 1, color: colors.text, fontSize: 15, fontFamily: fonts.body, paddingVertical: 12 },
+  realWrap: { paddingHorizontal: 20, paddingBottom: 12 },
   searchError: { color: colors.accent, fontSize: 13, fontFamily: fonts.body },
   mapWrap: {
     flex: 1,

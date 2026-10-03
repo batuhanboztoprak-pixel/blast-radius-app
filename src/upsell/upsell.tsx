@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from 'react';
 
+import { WELCOME_KEY } from '../config';
 import { usePremium } from '../state/premium';
 import {
   EMPTY_STATE,
@@ -197,6 +198,8 @@ export function UpsellProvider({ children }: { children: ReactNode }) {
   const resetForTesting = useCallback(() => {
     if (!__DEV__) return;
     update(() => EMPTY_STATE);
+    // Show the welcome cards again on the next launch.
+    AsyncStorage.removeItem(WELCOME_KEY).catch(() => {});
   }, [update]);
 
   const value = useMemo<UpsellContext>(

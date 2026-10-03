@@ -36,7 +36,47 @@ export function PaywallArt({ feature, width }: { feature: Feature; width: number
       {feature === 'ads' && <AdsArt width={width} />}
       {feature === 'cinematic' && <CinematicArt width={width} />}
       {feature === 'aftermath' && <AftermathArt width={width} />}
+      {feature === 'asteroids' && <AsteroidsArt width={width} />}
     </View>
+  );
+}
+
+/** Real asteroids: Earth with fly-by paths, the closest one glowing. */
+function AsteroidsArt({ width }: { width: number }) {
+  const pulse = usePulse(1400);
+  const ex = width * 0.3;
+  const ey = H * 0.55;
+  const rocks = [
+    { x: width * 0.6, y: H * 0.24, r: 5, d: `M ${width * 0.08} ${H * 0.06} Q ${width * 0.5} ${H * 0.36} ${width * 0.98} ${H * 0.1}` },
+    { x: width * 0.74, y: H * 0.62, r: 7, d: `M ${width * 0.42} ${H * 0.98} Q ${width * 0.62} ${H * 0.5} ${width * 0.98} ${H * 0.42}` },
+    { x: width * 0.47, y: H * 0.86, r: 4, d: `M ${width * 0.02} ${H * 0.98} Q ${width * 0.45} ${H * 0.76} ${width * 0.9} ${H * 0.98}` },
+  ];
+  const glow = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] });
+  return (
+    <>
+      <Svg width={width} height={H}>
+        <Defs>
+          <RadialGradient id="earthA" cx="40%" cy="35%" r="70%">
+            <Stop offset="0" stopColor="#3D6BC7" />
+            <Stop offset="1" stopColor="#0E1E4A" />
+          </RadialGradient>
+        </Defs>
+        {rocks.map((r, i) => (
+          <Path key={`p${i}`} d={r.d} stroke="rgba(255,255,255,0.22)" strokeWidth={1.2} strokeDasharray="4 5" fill="none" />
+        ))}
+        <Circle cx={ex} cy={ey} r={34} fill="url(#earthA)" />
+        <Circle cx={ex} cy={ey} r={37} fill="none" stroke="rgba(127,211,255,0.45)" strokeWidth={2} />
+        {rocks.map((r, i) => (
+          <Circle key={`r${i}`} cx={r.x} cy={r.y} r={r.r} fill="#C9B8A6" />
+        ))}
+      </Svg>
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: glow }]}>
+        <Svg width={width} height={H}>
+          <Circle cx={rocks[1].x} cy={rocks[1].y} r={13} fill={colors.accent} opacity={0.35} />
+        </Svg>
+      </Animated.View>
+      <Text style={[styles.nasaTag, { left: ex - 30, top: ey + 42 }]}>NASA / JPL</Text>
+    </>
   );
 }
 
@@ -264,6 +304,7 @@ function AdsArt({ width }: { width: number }) {
 
 const styles = StyleSheet.create({
   wrap: { alignSelf: 'center', alignItems: 'center', justifyContent: 'center' },
+  nasaTag: { position: 'absolute', width: 60, textAlign: 'center', fontSize: 9, letterSpacing: 1, color: colors.muted, fontFamily: fonts.bodySemi },
   labels: { position: 'absolute', left: 0, right: 0 },
   label: {
     position: 'absolute',

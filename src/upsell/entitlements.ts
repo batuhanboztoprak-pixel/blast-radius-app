@@ -19,9 +19,9 @@ export const PRESET_IDS: PresetId[] = ['tunguska', 'chelyabinsk', 'chicxulub'];
 /** Anything a free user can see but not use. */
 export type LockedItem = 'iron' | 'comet' | 'burns' | 'cinematic' | 'aftermath' | PresetId;
 
-/** Paywall topics; `ads` has no item to try. */
-export type Feature = 'burns' | 'compositions' | 'presets' | 'cinematic' | 'aftermath' | 'ads';
-export const FEATURES: Feature[] = ['burns', 'compositions', 'presets', 'cinematic', 'aftermath', 'ads'];
+/** Paywall topics; `ads` and `asteroids` (the full list of real NASA asteroids) have no item to try. */
+export type Feature = 'burns' | 'compositions' | 'presets' | 'cinematic' | 'aftermath' | 'asteroids' | 'ads';
+export const FEATURES: Feature[] = ['burns', 'compositions', 'presets', 'cinematic', 'aftermath', 'asteroids', 'ads'];
 
 /** Rewarded-ad unlocks a free user can earn per calendar day. */
 export const REWARDED_PER_DAY = 3;
@@ -232,6 +232,8 @@ export type UpgradeSource =
   | 'cinematic-chip'
   | 'aftermath-stage'
   | 'home-link'
+  | 'welcome'
+  | 'asteroid-list'
   | 'other';
 
 export const UPGRADE_SOURCES: UpgradeSource[] = [
@@ -245,6 +247,9 @@ export const UPGRADE_SOURCES: UpgradeSource[] = [
   'ad-nudge',
   'cinematic-chip',
   'aftermath-stage',
+  'home-link',
+  'welcome',
+  'asteroid-list',
   'other',
 ];
 
