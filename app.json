@@ -145,7 +145,8 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 280
         }
-      ]
+      ],
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true
