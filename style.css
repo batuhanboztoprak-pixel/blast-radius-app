@@ -7,3 +7,13 @@ h1{font-size:28px;line-height:1.2;margin:0}h2{font-size:19px;margin:32px 0 8px}
 p,li{color:var(--muted)}strong{color:var(--text)}a{color:var(--accent)}
 .card{background:var(--card);border-radius:16px;padding:16px 20px;margin:16px 0}
 footer{margin-top:48px;font-size:13px;color:var(--muted)}
+
+/* Key art behind the top of the page, fading into the background. */
+body{background:var(--bg) url(hero.jpg) no-repeat center top/max(100vw,560px) auto}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(180deg,rgba(10,3,64,.35) 0,rgba(10,3,64,.75) 340px,var(--bg) 760px)}
+body{position:relative;z-index:0}
+main{position:relative}
+header{padding-top:min(38vw,300px)}
+header img{box-shadow:0 8px 30px rgba(0,0,0,.45)}
+h1{text-shadow:0 2px 12px rgba(0,0,0,.6)}
