@@ -5,15 +5,15 @@ import { TestIds } from 'react-native-google-mobile-ads';
 export const PRO_PRODUCT_ID = 'com.blastradius.app.pro';
 
 /**
- * Production AdMob ad unit IDs. Replace the placeholders after creating the
- * units in AdMob (see docs/LAUNCH_CHECKLIST.md). Dev builds always use Google's
+ * Production AdMob ad unit IDs (iOS set; Android placeholders until an Android
+ * version exists). Dev builds always use Google's
  * test units so you can't accidentally click your own live ads.
  */
 const PROD_AD_UNITS = {
   ios: {
-    banner: 'ca-app-pub-XXXXXXXXXXXXXXXX/BBBBBBBBBB',
-    interstitial: 'ca-app-pub-XXXXXXXXXXXXXXXX/IIIIIIIIII',
-    rewarded: 'ca-app-pub-XXXXXXXXXXXXXXXX/RRRRRRRRRR',
+    banner: 'ca-app-pub-4306304660896226/2750552266',
+    interstitial: 'ca-app-pub-4306304660896226/4718325770',
+    rewarded: 'ca-app-pub-4306304660896226/6737898739',
   },
   android: {
     banner: 'ca-app-pub-XXXXXXXXXXXXXXXX/BBBBBBBBBB',
