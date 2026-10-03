@@ -231,6 +231,7 @@ export type UpgradeSource =
   | 'ad-nudge'
   | 'cinematic-chip'
   | 'aftermath-stage'
+  | 'home-link'
   | 'other';
 
 export const UPGRADE_SOURCES: UpgradeSource[] = [

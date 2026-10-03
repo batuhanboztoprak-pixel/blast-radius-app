@@ -25,6 +25,7 @@ import mobileAds, {
 } from 'react-native-google-mobile-ads';
 
 import {
+  ADS_CONFIGURED,
   AD_UNITS,
   INTERSTITIAL_EVERY_N_SIMULATIONS,
   INTERSTITIAL_MIN_INTERVAL_MS,
@@ -69,7 +70,8 @@ export function AdsProvider({ children }: { children: ReactNode }) {
   const started = useRef(false);
 
   useEffect(() => {
-    if (!hydrated || isPro || started.current) return;
+    // No real ad units yet (release build): stay ad-free and never ask for tracking.
+    if (!ADS_CONFIGURED || !hydrated || isPro || started.current) return;
     started.current = true;
     (async () => {
       let canRequestAds = false;
