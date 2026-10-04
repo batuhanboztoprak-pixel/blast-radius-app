@@ -59,7 +59,7 @@ export default function Paywall() {
   const feature: Feature | null = isFeature(params.feature) ? params.feature : null;
   const item: LockedItem | null = isLockedItem(params.item) ? params.item : null;
 
-  const { isPro, price, busy, error, purchase, restore } = usePremium();
+  const { isPro, price, busy, error, purchase, restore, setDevPro } = usePremium();
   const { showPrivacyOptions, rewardedReady, showRewarded } = useAds();
   const { grant, rewardsLeftToday } = useUpsell();
   const { updateParams, applyPreset } = useSimulation();
@@ -186,6 +186,19 @@ export default function Paywall() {
             <Text style={styles.smallLink}>{t('paywall.privacyPolicy')}</Text>
           </Pressable>
         </View>
+        {__DEV__ && (
+          // Development builds only (never in TestFlight or the App Store): unlock Pro for screenshots and testing.
+          <Pressable
+            onPress={() => {
+              setDevPro(true);
+              router.back();
+            }}
+            accessibilityRole="button"
+            style={styles.devPro}
+          >
+            <Text style={styles.devProText}>DEV · Act as Pro</Text>
+          </Pressable>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -248,6 +261,8 @@ const styles = StyleSheet.create({
   footer: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 12, gap: 10 },
   links: { flexDirection: 'row', justifyContent: 'center', gap: 24, marginTop: 4 },
   triesLeft: { fontSize: 12, color: colors.muted, fontFamily: fonts.body, textAlign: 'center' },
+  devPro: { alignSelf: 'center', marginTop: 10, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: colors.dim, borderStyle: 'dashed' },
+  devProText: { color: colors.muted, fontSize: 12, fontFamily: fonts.bodySemi },
   legal: { color: colors.dim, fontSize: 11, fontFamily: fonts.body, textAlign: 'center', marginTop: 6 },
   smallLink: { color: colors.dim, fontSize: 11, fontFamily: fonts.bodyMedium, textDecorationLine: 'underline' },
   storeNote: { marginTop: 12, color: colors.muted, fontFamily: fonts.body, fontSize: 12 },

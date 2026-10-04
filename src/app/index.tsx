@@ -115,6 +115,7 @@ export default function PickLocation() {
         step={t('pick.step')}
         title={t('pick.title')}
         subtitle={t('pick.subtitle')}
+        onTitleLongPress={__DEV__ ? () => router.push('/upgrade-stats') : undefined}
       />
 
       <View style={styles.searchWrap}>
