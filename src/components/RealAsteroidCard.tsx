@@ -37,7 +37,7 @@ export function RealAsteroidCard() {
           <Text style={styles.name} numberOfLines={1}>
             {today.name}
           </Text>
-          <Text style={styles.meta} numberOfLines={1}>
+          <Text style={styles.meta} numberOfLines={2}>
             {today.sizeEstimated ? '≈ ' : ''}
             {formatDiameter(today.diameterM, units)} · {formatSpeed(today.impactVelocityMs, units)} ·{' '}
             {t('real.passes', { date: formatShortDate(today.approachAt), ld: formatLd(today.distanceLd) })}
