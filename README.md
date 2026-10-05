@@ -51,6 +51,7 @@ docs/
   LOCALIZATION.md     languages, translation files, App Store listings (store/listing.json)
   LAUNCH_CHECKLIST.md AdMob / App Store Connect / privacy steps
   APP_STORE_SUBMISSION.md step-by-step submission guide
+  ROADMAP.md          plan for 1.1 and later
 site/             the support + privacy website (published from the gh-pages branch to blastradius.curfewapp.co)
 ```
 
