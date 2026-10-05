@@ -11,6 +11,8 @@ import { TINT_COLOR, stageLayers } from '../components/aftermathLayers';
 import { GlobeView } from '../components/GlobeView';
 import { GLOBE_AVAILABLE_ABOVE_M, GLOBE_DEFAULT_ABOVE_M } from '../components/globe';
 import { CinematicHud, type CinePhase } from '../components/CinematicHud';
+import { CloudPass } from '../components/CloudPass';
+import { EntrySequence } from '../components/EntrySequence';
 import { CINE_FALL, ImpactMap } from '../components/ImpactMap';
 import { RingLegend } from '../components/RingLegend';
 import { BackIcon, LockIcon, ShareIcon } from '../components/icons';
@@ -46,6 +48,7 @@ const ringRadius = (rings: Ring[], kind: Ring['kind']) => rings.find((r) => r.ki
 const WHOOSH = require('../../assets/sounds/whoosh.m4a');
 const BOOM = require('../../assets/sounds/boom.m4a');
 const RUMBLE = require('../../assets/sounds/rumble.m4a');
+const ENTRY = require('../../assets/sounds/entry.m4a');
 
 export default function Result() {
   const { result, location, presetId, realAsteroid } = useSimulation();
@@ -83,6 +86,9 @@ export default function Result() {
   const whoosh = useAudioPlayer(WHOOSH);
   const boom = useAudioPlayer(BOOM);
   const rumble = useAudioPlayer(RUMBLE);
+  const entry = useAudioPlayer(ENTRY);
+  /** The full-screen opening shot of the cinematic strike (keyed per strike). */
+  const [entryShot, setEntryShot] = useState<number | null>(null);
   useEffect(() => {
     // Respect the silent switch and never stop the user's music.
     setAudioModeAsync({ playsInSilentMode: false, interruptionMode: 'mixWithOthers' }).catch(() => {});
@@ -148,8 +154,12 @@ export default function Result() {
   // --- Cinematic strike: heads-up display and sound -------------------------
   const onCinematicPhase = (phase: CinePhase) => {
     setCine({ phase, at: Date.now() });
+    if (phase === 'entry') setEntryShot(Date.now());
     try {
-      if (phase === 'fall') {
+      if (phase === 'entry') {
+        entry.seekTo(0);
+        entry.play();
+      } else if (phase === 'fall') {
         whoosh.seekTo(0);
         whoosh.play();
       } else if (phase === 'impact') {
@@ -166,6 +176,7 @@ export default function Result() {
 
   const replay = () => {
     setCine(null);
+    setEntryShot(null);
     setFocus(null);
     closeStage();
     setView('map');
@@ -217,6 +228,14 @@ export default function Result() {
                 deaths={world.lastStrike?.impact.totalDeaths ?? 0}
                 units={units}
                 top={insets.top + 100}
+              />
+              <CloudPass
+                phase={cine?.phase ?? null}
+                since={cine?.at ?? 0}
+                fallMs={CINE_FALL}
+                airburstAltitudeM={result.airburstAltitudeM}
+                width={width}
+                height={mapHeight}
               />
               {stageOpen && strikeDone ? (
                 <StageCaption
@@ -439,6 +458,15 @@ export default function Result() {
         <PrimaryButton label={t('common.share')} onPress={() => router.push('/share')} style={styles.flex} />
       </View>
       <AdBanner />
+      {entryShot !== null && (
+        <EntrySequence
+          key={entryShot}
+          velocityMs={result.params.velocityMs}
+          units={units}
+          top={insets.top + 100}
+          onDone={() => setEntryShot(null)}
+        />
+      )}
     </SafeAreaView>
   );
 }

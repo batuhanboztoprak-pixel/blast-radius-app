@@ -5,7 +5,7 @@ import { t } from '../i18n/core';
 import { dec, formatDistance, formatEnergyMt, formatPeople, formatSpeed, type Units } from '../physics/format';
 import { colors, fonts } from '../theme';
 
-export type CinePhase = 'fall' | 'impact' | 'done';
+export type CinePhase = 'entry' | 'fall' | 'impact' | 'done';
 
 interface Props {
   phase: CinePhase | null;
@@ -29,6 +29,15 @@ const ENTRY_ALT_M = 100_000;
 /** How long the numbers take to roll up after impact. */
 const ENERGY_ROLL_MS = 1500;
 const DEATHS_ROLL_MS = 3200;
+
+/**
+ * Fraction of the way from the atmosphere's edge still to fall, at fraction p
+ * of the on-screen fall. Fast high up, slower near the ground, so the last few
+ * kilometres (and the cloud layer) get screen time.
+ */
+export const fallLeft = (p: number) => Math.pow(1 - Math.min(Math.max(p, 0), 1), 1.6);
+/** Top of the altitude readout's fall: the atmosphere's edge (100 km). */
+export const FALL_START_ALT_M = ENTRY_ALT_M;
 
 const easeOut = (x: number) => 1 - Math.pow(1 - Math.min(Math.max(x, 0), 1), 3);
 
@@ -73,7 +82,8 @@ export function CinematicHud({
     }).start();
   }, [phase, fade]);
 
-  if (!phase) return null;
+  // During the entry the full-screen opening shot shows its own readout.
+  if (!phase || phase === 'entry') return null;
   const elapsed = Math.max(0, now - since);
 
   const endAlt = airburstAltitudeM ?? 0;
@@ -83,9 +93,7 @@ export function CinematicHud({
 
   let body: ReactNode;
   if (phase === 'fall') {
-    // The meteor's screen position eases in (quadratic), so the readout does too.
-    const p = Math.min(elapsed / fallMs, 1);
-    const left = 1 - p * p;
+    const left = fallLeft(elapsed / fallMs);
     const alt = endAlt + (ENTRY_ALT_M - endAlt) * left;
     body = (
       <>

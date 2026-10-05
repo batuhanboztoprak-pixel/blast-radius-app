@@ -21,6 +21,7 @@ import { regionForRadius } from '../lib/geo';
 import { FALLBACK_FRAME_RADIUS_M, RING_STYLE } from './rings';
 import type { StageCircle, StageEffect } from './aftermathLayers';
 import { StageEffects } from './StageEffects';
+import { ENTRY_MS } from './EntrySequence';
 import { StrikeAnimation, type StrikeRing } from './StrikeAnimation';
 
 interface Props {
@@ -52,8 +53,11 @@ interface Props {
    * it settles top-down. Pro, a first-strike taste, or a rewarded unlock.
    */
   cinematic?: boolean;
-  /** Cinematic only: the meteor starts falling, hits, and the sequence ends (for the HUD and sound). */
-  onCinematicPhase?: (phase: 'fall' | 'impact' | 'done') => void;
+  /**
+   * Cinematic only: the full-screen entry shot starts, the meteor starts falling
+   * on the map, hits, and the sequence ends (for the entry shot, HUD and sound).
+   */
+  onCinematicPhase?: (phase: 'entry' | 'fall' | 'impact' | 'done') => void;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -223,9 +227,11 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
           setImpactAt(0);
           setGrowth(0);
           setRingsHidden(false);
-          // Start high above, then dive in tilted while the meteor falls.
+          // Start high above (hidden under the full-screen entry shot), then dive
+          // in tilted while the meteor falls.
           m.setCamera({ center: location, pitch: 0, heading: 0, altitude: R * 7 });
-          await wait(60);
+          phaseRef.current?.('entry');
+          await wait(ENTRY_MS);
           if (cancelled) return;
           m.animateCamera({ center: location, pitch: 60, heading: 30, altitude: close }, { duration: CINE_FALL });
           setStrike({
