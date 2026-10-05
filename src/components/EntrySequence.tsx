@@ -4,6 +4,7 @@ import Svg, { Circle, Defs, Ellipse, G, Line, LinearGradient, RadialGradient, Re
 
 import { t } from '../i18n/core';
 import { formatDistance, formatSpeed, type Units } from '../physics/format';
+import type { Composition } from '../physics/impact';
 import { colors, fonts } from '../theme';
 
 /** How long the entry plays before the map dive takes over, ms (ImpactMap waits this long). */
@@ -23,6 +24,49 @@ const TAIL = { x: 0.668, y: -0.744 };
 /** The tail's angle from straight up, degrees: streaks rush past along it. */
 const TAIL_DEG = (Math.atan2(TAIL.x, -TAIL.y) * 180) / Math.PI;
 
+/**
+ * How each kind of asteroid burns on entry (matching the map strike's looks):
+ * stony rock glows orange-yellow (sodium), an iron body burns white-hot and
+ * throws golden sparks, an icy comet comes in fast with a blue-cyan glow.
+ */
+const ENTRY_LOOK: Record<
+  Composition,
+  {
+    heat: [string, string, string, string];
+    tint: [string, string];
+    streak: string;
+    core: [string, string, string];
+    /** A coloured wash over the meteor art (icy blue for comets), or null to keep its own colours. */
+    wash: { color: string; opacity: number } | null;
+    sparks: string | null;
+  }
+> = {
+  rock: {
+    heat: ['#FFF4C2', '#FFB347', '#FF5A1F', '#FF2E2E'],
+    tint: ['#FF3D2E', '#FF7A1A'],
+    streak: '#FFE2B8',
+    core: ['#FFFBE6', '#FFC24A', '#FF6A2E'],
+    wash: null,
+    sparks: null,
+  },
+  iron: {
+    heat: ['#FFFFFF', '#FFF0C8', '#FFB15A', '#FF7A2E'],
+    tint: ['#FFB347', '#FFE2A8'],
+    streak: '#FFF6DE',
+    core: ['#FFFFFF', '#FFF3D1', '#FFC27A'],
+    wash: null,
+    sparks: '#FFE3A3',
+  },
+  comet: {
+    heat: ['#F4FEFF', '#A8E9FF', '#4AD3E6', '#4A9EFF'],
+    tint: ['#1E5BFF', '#4AD3E6'],
+    streak: '#CFF7FF',
+    core: ['#FFFFFF', '#CFF7FF', '#4AD3E6'],
+    wash: { color: '#78C8FF', opacity: 0.75 },
+    sparks: '#CFF7FF',
+  },
+};
+
 /** Deterministic pseudo-random numbers, so the starfield is the same every time. */
 function seeded(seed: number) {
   let s = seed;
@@ -33,6 +77,7 @@ function seeded(seed: number) {
 }
 
 interface Props {
+  composition: Composition;
   velocityMs: number;
   units: Units;
   /** Where the readout panel sits (matches the map HUD, so the hand-over is seamless). */
@@ -46,7 +91,8 @@ interface Props {
  * ignites in the atmosphere, plasma, heat and streaks rushing past, until it
  * cross-fades into the real map dive. Played only when Reduce Motion is off.
  */
-export function EntrySequence({ velocityMs, units, top, onDone }: Props) {
+export function EntrySequence({ composition, velocityMs, units, top, onDone }: Props) {
+  const look = ENTRY_LOOK[composition] ?? ENTRY_LOOK.rock;
   const { width: W, height: H } = useWindowDimensions();
   const [p] = useState(() => new Animated.Value(0));
   const [fade] = useState(() => new Animated.Value(1));
@@ -121,6 +167,18 @@ export function EntrySequence({ velocityMs, units, top, onDone }: Props) {
     );
   }, [D]);
 
+  const sparks = useMemo(() => {
+    const r = seeded(11);
+    return Array.from({ length: 14 }, () => ({
+      r: 1.2 + r() * 2.2,
+      d: r(),
+      ox: (r() - 0.5) * Wm * 0.08,
+      oy: (r() - 0.5) * Wm * 0.08,
+      sx: (r() - 0.5) * 0.7,
+      sy: (r() - 0.5) * 0.7,
+    }));
+  }, [Wm]);
+
   // --- Animated values --------------------------------------------------------
   const earthScale = p.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 1.38, 2.5] });
   const starsY = p.interpolate({ inputRange: [0, 1], outputRange: [0, -H * 0.55], easing: Easing.in(Easing.quad) });
@@ -191,8 +249,8 @@ export function EntrySequence({ velocityMs, units, top, onDone }: Props) {
         <Svg width={W} height={H}>
           <Defs>
             <LinearGradient id="tint" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset={0} stopColor="#FF3D2E" stopOpacity={0.15} />
-              <Stop offset={1} stopColor="#FF7A1A" stopOpacity={0.85} />
+              <Stop offset={0} stopColor={look.tint[0]} stopOpacity={0.15} />
+              <Stop offset={1} stopColor={look.tint[1]} stopOpacity={0.85} />
             </LinearGradient>
           </Defs>
           <Rect width={W} height={H} fill="url(#tint)" />
@@ -225,9 +283,9 @@ export function EntrySequence({ velocityMs, units, top, onDone }: Props) {
               <Svg width={4} height={s.len}>
                 <Defs>
                   <LinearGradient id={`st${gi}${i}`} x1="0" y1="0" x2="0" y2="1">
-                    <Stop offset={0} stopColor="#FFE2B8" stopOpacity={0} />
-                    <Stop offset={0.5} stopColor="#FFE2B8" stopOpacity={s.o} />
-                    <Stop offset={1} stopColor="#FFE2B8" stopOpacity={0} />
+                    <Stop offset={0} stopColor={look.streak} stopOpacity={0} />
+                    <Stop offset={0.5} stopColor={look.streak} stopOpacity={s.o} />
+                    <Stop offset={1} stopColor={look.streak} stopOpacity={0} />
                   </LinearGradient>
                 </Defs>
                 <Line x1={2} y1={0} x2={2} y2={s.len} stroke={`url(#st${gi}${i})`} strokeWidth={s.w} />
@@ -252,10 +310,10 @@ export function EntrySequence({ velocityMs, units, top, onDone }: Props) {
         <Svg width={glowR * 2} height={glowR * 2}>
           <Defs>
             <RadialGradient id="heat" cx="50%" cy="50%" r="50%">
-              <Stop offset={0} stopColor="#FFF4C2" stopOpacity={0.95} />
-              <Stop offset={0.18} stopColor="#FFB347" stopOpacity={0.75} />
-              <Stop offset={0.5} stopColor="#FF5A1F" stopOpacity={0.32} />
-              <Stop offset={1} stopColor="#FF2E2E" stopOpacity={0} />
+              <Stop offset={0} stopColor={look.heat[0]} stopOpacity={0.95} />
+              <Stop offset={0.18} stopColor={look.heat[1]} stopOpacity={0.75} />
+              <Stop offset={0.5} stopColor={look.heat[2]} stopOpacity={0.32} />
+              <Stop offset={1} stopColor={look.heat[3]} stopOpacity={0} />
             </RadialGradient>
           </Defs>
           <Rect width={glowR * 2} height={glowR * 2} fill="url(#heat)" />
@@ -282,6 +340,37 @@ export function EntrySequence({ velocityMs, units, top, onDone }: Props) {
         }}
       >
         <Animated.Image source={METEOR} style={{ width: Wm, height: Hm }} />
+        {look.wash && (
+          // Recolours the art for iron (white-hot) and comets (icy blue).
+          <Animated.Image
+            source={METEOR}
+            style={{ position: 'absolute', left: 0, top: 0, width: Wm, height: Hm, tintColor: look.wash.color, opacity: look.wash.opacity }}
+          />
+        )}
+        {look.sparks &&
+          sparks.map((k, i) => {
+            const r = rush[i % 3];
+            const dist = Wm * (0.25 + k.d * 0.4);
+            return (
+              <Animated.View
+                key={i}
+                style={{
+                  position: 'absolute',
+                  left: ROCK.x * Wm + k.ox - k.r,
+                  top: ROCK.y * Hm + k.oy - k.r,
+                  width: k.r * 2,
+                  height: k.r * 2,
+                  borderRadius: k.r,
+                  backgroundColor: look.sparks ?? undefined,
+                  opacity: Animated.multiply(glow, r.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0, 1, 0] })),
+                  transform: [
+                    { translateX: r.interpolate({ inputRange: [0, 1], outputRange: [0, (TAIL.x + k.sx) * dist] }) },
+                    { translateY: r.interpolate({ inputRange: [0, 1], outputRange: [0, (TAIL.y + k.sy) * dist] }) },
+                  ],
+                }}
+              />
+            );
+          })}
         <Animated.View
           style={{
             position: 'absolute',
@@ -295,9 +384,9 @@ export function EntrySequence({ velocityMs, units, top, onDone }: Props) {
           <Svg width={Wm * 0.24} height={Wm * 0.24}>
             <Defs>
               <RadialGradient id="core" cx="50%" cy="50%" r="50%">
-                <Stop offset={0} stopColor="#FFFBE6" stopOpacity={0.9} />
-                <Stop offset={0.5} stopColor="#FFC24A" stopOpacity={0.35} />
-                <Stop offset={1} stopColor="#FF6A2E" stopOpacity={0} />
+                <Stop offset={0} stopColor={look.core[0]} stopOpacity={0.9} />
+                <Stop offset={0.5} stopColor={look.core[1]} stopOpacity={0.35} />
+                <Stop offset={1} stopColor={look.core[2]} stopOpacity={0} />
               </RadialGradient>
             </Defs>
             <Rect width={Wm * 0.24} height={Wm * 0.24} fill="url(#core)" />

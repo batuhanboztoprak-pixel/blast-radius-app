@@ -461,6 +461,7 @@ export default function Result() {
       {entryShot !== null && (
         <EntrySequence
           key={entryShot}
+          composition={result.params.composition}
           velocityMs={result.params.velocityMs}
           units={units}
           top={insets.top + 100}
