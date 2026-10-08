@@ -89,6 +89,9 @@ export default function Result() {
   const entry = useAudioPlayer(ENTRY);
   /** The full-screen opening shot of the cinematic strike (keyed per strike). */
   const [entryShot, setEntryShot] = useState<number | null>(null);
+  /** Pro was bought while this result was on screen: replay it cinematically. */
+  const [proAtOpen] = useState(isPro);
+  const upgradedHere = isPro && !proAtOpen;
   useEffect(() => {
     // Respect the silent switch and never stop the user's music.
     setAudioModeAsync({ playsInSilentMode: false, interruptionMode: 'mixWithOthers' }).catch(() => {});
@@ -97,7 +100,9 @@ export default function Result() {
   if (!result || !location) return <Redirect href="/" />;
 
   const burnsUnlocked = isPro || !!run?.burns;
-  const cinematic = isPro || !!run?.cinematic;
+  // The strike style chosen on the asteroid screen (Pro can pick Standard), or
+  // cinematic straight away when Pro is bought on this screen.
+  const cinematic = !!run?.cinematic || upgradedHere;
   // Becoming cinematic (e.g. Pro bought on this screen) changes the token, so
   // the strike plays again straight away in the new style.
   const token = strikeToken * 2 + (cinematic ? 1 : 0);

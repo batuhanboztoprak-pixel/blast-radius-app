@@ -33,6 +33,8 @@ interface SimulationState {
   realAsteroid: RealAsteroid | null;
   /** Load a real asteroid's size and impact speed (rock, 45°). */
   applyRealAsteroid: (asteroid: RealAsteroid) => void;
+  /** Deselect the real asteroid and go back to the custom asteroid the user had before it. */
+  clearRealAsteroid: () => void;
   /** Bumps whenever a preset or real asteroid is applied, so sliders can jump to its values. */
   presetEpoch: number;
   result: ImpactResult | null;
@@ -81,6 +83,12 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
         setPresetId(null);
         setRealAsteroid(a);
         setParams({ diameterM: a.diameterM, velocityMs: a.impactVelocityMs, composition: 'rock', angleDeg: DEFAULT_PARAMS.angleDeg });
+        setPresetEpoch((n) => n + 1);
+      },
+      clearRealAsteroid: () => {
+        if (!realAsteroid) return;
+        setRealAsteroid(null);
+        setParams({ ...customParams, angleDeg: DEFAULT_PARAMS.angleDeg });
         setPresetEpoch((n) => n + 1);
       },
       presetEpoch,

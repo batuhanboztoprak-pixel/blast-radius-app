@@ -99,8 +99,6 @@ export function EntrySequence({ composition, velocityMs, units, top, onDone }: P
   const [shakeX] = useState(() => new Animated.Value(0));
   const [shakeY] = useState(() => new Animated.Value(0));
   const [rush] = useState(() => [0, 1, 2].map(() => new Animated.Value(0)));
-  const [start] = useState(() => Date.now());
-  const [now, setNow] = useState(start);
 
   useEffect(() => {
     const loops: Animated.CompositeAnimation[] = [];
@@ -130,16 +128,9 @@ export function EntrySequence({ composition, velocityMs, units, top, onDone }: P
       }, ENTRY_MS),
     );
 
-    let raf = 0;
-    const tick = () => {
-      setNow(Date.now());
-      if (Date.now() - start < ENTRY_MS) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
     return () => {
       loops.forEach((l) => l.stop());
       timers.forEach(clearTimeout);
-      cancelAnimationFrame(raf);
     };
     // Runs once per mount: every strike mounts a fresh sequence.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -201,8 +192,6 @@ export function EntrySequence({ composition, velocityMs, units, top, onDone }: P
   const ay = (ROCK.y - 0.5) * Hm;
 
   // --- Readout ----------------------------------------------------------------
-  const k = Math.min((now - start) / ENTRY_MS, 1);
-  const alt = HANDOFF_ALT_M + (START_ALT_M - HANDOFF_ALT_M) * Math.pow(1 - k, 1.4);
 
   return (
     <Animated.View style={[StyleSheet.absoluteFill, styles.root, { opacity: fade }]} pointerEvents="auto">
@@ -404,7 +393,7 @@ export function EntrySequence({ composition, velocityMs, units, top, onDone }: P
           <Text style={styles.label}>{t('hud.entry')}</Text>
           <View style={styles.row}>
             <Text style={styles.rowLabel}>{t('hud.altitude')}</Text>
-            <Text style={styles.rowValue}>{formatDistance(alt, units)}</Text>
+            <AltitudeReadout units={units} />
           </View>
           <View style={styles.row}>
             <Text style={styles.rowLabel}>{t('hud.speed')}</Text>
@@ -414,6 +403,26 @@ export function EntrySequence({ composition, velocityMs, units, top, onDone }: P
       </Animated.View>
     </Animated.View>
   );
+}
+
+/**
+ * The altitude number on its own, ticking every ~50 ms. Kept separate so its
+ * updates re-render only this line, not the whole scene (which would stutter).
+ */
+function AltitudeReadout({ units }: { units: Units }) {
+  const [start] = useState(() => Date.now());
+  const [now, setNow] = useState(start);
+  useEffect(() => {
+    const id = setInterval(() => {
+      const t = Date.now();
+      setNow(t);
+      if (t - start >= ENTRY_MS) clearInterval(id);
+    }, 50);
+    return () => clearInterval(id);
+  }, [start]);
+  const k = Math.min((now - start) / ENTRY_MS, 1);
+  const alt = HANDOFF_ALT_M + (START_ALT_M - HANDOFF_ALT_M) * Math.pow(1 - k, 1.4);
+  return <Text style={styles.rowValue}>{formatDistance(alt, units)}</Text>;
 }
 
 const styles = StyleSheet.create({

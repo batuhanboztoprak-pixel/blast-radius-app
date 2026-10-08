@@ -19,7 +19,7 @@ import { LockIcon } from './icons';
  */
 export function RealAsteroidCard() {
   const { today, list, source } = useRealAsteroids();
-  const { realAsteroid, applyRealAsteroid } = useSimulation();
+  const { realAsteroid, applyRealAsteroid, clearRealAsteroid } = useSimulation();
   const { units } = useUnits();
   const { isPro } = usePremium();
   const upsell = useUpsell();
@@ -46,7 +46,9 @@ export function RealAsteroidCard() {
         <Pressable
           onPress={() => {
             Haptics.selectionAsync().catch(() => {});
-            applyRealAsteroid(today);
+            // A second tap deselects it and brings back the user's own asteroid.
+            if (selected) clearRealAsteroid();
+            else applyRealAsteroid(today);
           }}
           style={[styles.use, selected && styles.useOn]}
           accessibilityRole="button"
