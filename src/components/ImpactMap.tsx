@@ -21,7 +21,6 @@ import { regionForRadius } from '../lib/geo';
 import { FALLBACK_FRAME_RADIUS_M, RING_STYLE } from './rings';
 import type { StageCircle, StageEffect } from './aftermathLayers';
 import { StageEffects } from './StageEffects';
-import { ENTRY_MS } from './EntrySequence';
 import { StrikeAnimation, type StrikeRing } from './StrikeAnimation';
 
 interface Props {
@@ -53,11 +52,8 @@ interface Props {
    * it settles top-down. Pro, a first-strike taste, or a rewarded unlock.
    */
   cinematic?: boolean;
-  /**
-   * Cinematic only: the full-screen entry shot starts, the meteor starts falling
-   * on the map, hits, and the sequence ends (for the entry shot, HUD and sound).
-   */
-  onCinematicPhase?: (phase: 'entry' | 'fall' | 'impact' | 'done') => void;
+  /** Cinematic only: the meteor starts falling, hits, and the sequence ends (for the HUD and sound). */
+  onCinematicPhase?: (phase: 'fall' | 'impact' | 'done') => void;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -65,7 +61,7 @@ const EARTH_RADIUS_M = 6.371e6;
 
 
 /** Cinematic timeline, ms. */
-export const CINE_FALL = 2800;
+export const CINE_FALL = 3400;
 const CINE_GROW = 2000;
 /** The first moments after impact play in slow motion: this long, at this speed. */
 const SLOW_MS = 700;
@@ -111,6 +107,8 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
   useImperativeHandle(ref, () => map.current as MapView);
 
   const [ready, setReady] = useState(false);
+  /** Cinematic: show satellite imagery while the strike plays. */
+  const [satellite, setSatellite] = useState(false);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [strike, setStrike] = useState<Strike | null>(null);
   /** Hide the real rings while the animation is drawing them. */
@@ -130,6 +128,7 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
   });
   const reveal = () => {
     setRingsHidden(false);
+    setSatellite(false);
     endRef.current?.();
   };
 
@@ -227,11 +226,12 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
           setImpactAt(0);
           setGrowth(0);
           setRingsHidden(false);
-          // Start high above (hidden under the full-screen entry shot), then dive
-          // in tilted while the meteor falls.
-          m.setCamera({ center: location, pitch: 0, heading: 0, altitude: R * 7 });
-          phaseRef.current?.('entry');
-          await wait(ENTRY_MS);
+          // Real satellite imagery for the shot: start high above the target
+          // (a 3D globe for big impacts), give the tiles a moment to load, then
+          // dive in tilted while the fireball comes down.
+          setSatellite(true);
+          m.setCamera({ center: location, pitch: 0, heading: 0, altitude: Math.max(R * 7, 40_000) });
+          await wait(450);
           if (cancelled) return;
           m.animateCamera({ center: location, pitch: 60, heading: 30, altitude: close }, { duration: CINE_FALL });
           setStrike({
@@ -304,6 +304,7 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
       map.current?.animateToRegion(region, 400);
     }, G + 300 + CINE_ORBIT + CINE_SETTLE);
     const done = setTimeout(() => {
+      setSatellite(false);
       setGrowth(null);
       setCameraFree(false);
       setImpactAt(0);
@@ -382,6 +383,7 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
           measureFrame();
         }}
         userInterfaceStyle="dark"
+        mapType={satellite ? 'satelliteFlyover' : 'standard'}
         showsPointsOfInterests={false}
         pitchEnabled={cameraFree}
         rotateEnabled={cameraFree}

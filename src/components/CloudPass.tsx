@@ -53,15 +53,15 @@ export function CloudPass({ phase, since, fallMs, airburstAltitudeM, width, heig
 
   const puffs = useMemo(() => {
     // Directions spread around the screen, each puff with its own moment.
-    return Array.from({ length: 9 }, (_, i) => {
-      const a = (i / 9) * Math.PI * 2 + (i % 2 ? 0.4 : 0);
+    return Array.from({ length: 6 }, (_, i) => {
+      const a = (i / 6) * Math.PI * 2 + (i % 2 ? 0.4 : 0);
       return { dx: Math.cos(a), dy: Math.sin(a) * 0.8, t0: (i % 5) * 0.1, size: 0.55 + ((i * 37) % 10) / 22 };
     });
   }, []);
 
   if (!show) return null;
   const R = Math.max(width, height) * 0.6;
-  const haze = p.interpolate({ inputRange: [0, 0.35, 0.6, 1], outputRange: [0, 0.4, 0.25, 0] });
+  const haze = p.interpolate({ inputRange: [0, 0.35, 0.6, 1], outputRange: [0, 0.22, 0.14, 0] });
 
   return (
     <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.clip]}>
@@ -69,7 +69,7 @@ export function CloudPass({ phase, since, fallMs, airburstAltitudeM, width, heig
       {puffs.map((c, i) => {
         const range = [c.t0, c.t0 + 0.25, c.t0 + 0.55];
         const scale = p.interpolate({ inputRange: [c.t0, c.t0 + 0.55], outputRange: [0.35, 3.2], extrapolate: 'clamp', easing: Easing.in(Easing.quad) });
-        const opacity = p.interpolate({ inputRange: range, outputRange: [0, 0.92, 0], extrapolate: 'clamp' });
+        const opacity = p.interpolate({ inputRange: range, outputRange: [0, 0.7, 0], extrapolate: 'clamp' });
         const tx = p.interpolate({ inputRange: [c.t0, c.t0 + 0.55], outputRange: [c.dx * width * 0.08, c.dx * width * 0.9], extrapolate: 'clamp', easing: Easing.in(Easing.quad) });
         const ty = p.interpolate({ inputRange: [c.t0, c.t0 + 0.55], outputRange: [c.dy * height * 0.08, c.dy * height * 0.7], extrapolate: 'clamp', easing: Easing.in(Easing.quad) });
         const w = R * c.size;

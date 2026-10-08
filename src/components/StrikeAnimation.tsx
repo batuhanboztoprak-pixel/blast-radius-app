@@ -88,6 +88,10 @@ export function StrikeAnimation({
   const front = useState(() => new Animated.Value(0))[0];
   const debris = useState(() => new Animated.Value(0))[0];
   const plume = useState(() => new Animated.Value(0))[0];
+  /** Cinematic: the trail left in the sky fades after impact. */
+  const trailFade = useState(() => new Animated.Value(1))[0];
+  /** Cinematic: the fireball's glow flickers as it burns. */
+  const flicker = useState(() => new Animated.Value(0))[0];
   /** The cinematic strike gets a longer, blinding flash and a rising fireball plume. */
   const cine = intensity > 1;
 
@@ -136,6 +140,19 @@ export function StrikeAnimation({
       Animated.delay(250),
     ]);
 
+    const flick = Animated.loop(
+      Animated.sequence([
+        Animated.timing(flicker, { toValue: 1, duration: 70, ...native }),
+        Animated.timing(flicker, { toValue: 0.3, duration: 90, ...native }),
+        Animated.timing(flicker, { toValue: 0.8, duration: 60, ...native }),
+        Animated.timing(flicker, { toValue: 0, duration: 110, ...native }),
+      ]),
+    );
+    if (cine) flick.start();
+    const trailTimer = setTimeout(() => {
+      flick.stop();
+      Animated.timing(trailFade, { toValue: 0, duration: 2600, easing: Easing.out(Easing.quad), ...native }).start();
+    }, FALL_MS);
     const impactTimer = setTimeout(onImpact, FALL_MS);
     seq.start(({ finished }) => {
       if (!finished) return;
@@ -144,6 +161,8 @@ export function StrikeAnimation({
     });
     return () => {
       clearTimeout(impactTimer);
+      clearTimeout(trailTimer);
+      flick.stop();
       seq.stop();
     };
     // Runs once per mount; the parent remounts for a replay.
@@ -245,8 +264,23 @@ export function StrikeAnimation({
         </Svg>
       </Animated.View>
 
+      {cine && (
+        <RealisticFall
+          center={center}
+          travel={travel}
+          fall={fall}
+          trailFade={trailFade}
+          flicker={flicker}
+          meteorX={meteorX}
+          meteorY={meteorY}
+          meteorOpacity={meteorOpacity}
+          head={look.head}
+          tail={look.tail}
+        />
+      )}
+
       {/* Meteor: glowing head with a tail pointing back along its path. */}
-      <Animated.View
+      {!cine && <Animated.View
         style={{
           position: 'absolute',
           left: center.x - 10,
@@ -280,7 +314,7 @@ export function StrikeAnimation({
           ))}
           <Circle cx={10} cy={TAIL} r={composition === 'comet' ? 11 : 9} fill="url(#head)" />
         </Svg>
-      </Animated.View>
+      </Animated.View>}
 
       {cine && (
         // A fireball plume rising out of the impact and spreading as it cools.
@@ -316,6 +350,114 @@ export function StrikeAnimation({
       {/* Flash. */}
       <Animated.View style={[StyleSheet.absoluteFill, styles.flash, { opacity: flash.interpolate({ inputRange: [0, 1], outputRange: [0, cine ? 1 : 0.85] }) }]} />
     </Animated.View>
+  );
+}
+
+/**
+ * The cinematic fireball, as it looks from the ground or a satellite: a tiny
+ * white-hot core with a flickering glow, a long thin trail that tapers away
+ * behind it, and a faint smoke trail that hangs in the sky after impact.
+ */
+function RealisticFall({
+  center,
+  travel,
+  fall,
+  trailFade,
+  flicker,
+  meteorX,
+  meteorY,
+  meteorOpacity,
+  head,
+  tail,
+}: {
+  center: { x: number; y: number };
+  travel: number;
+  fall: Animated.Value;
+  trailFade: Animated.Value;
+  flicker: Animated.Value;
+  meteorX: Animated.AnimatedInterpolation<number>;
+  meteorY: Animated.AnimatedInterpolation<number>;
+  meteorOpacity: Animated.AnimatedInterpolation<number>;
+  head: [string, string, string];
+  tail: [string, string];
+}) {
+  const TH = 22; // trail strip thickness (the smoke is the widest part)
+  const G = 46; // glow radius
+  // Distance from the impact point back to the fireball, along its path.
+  const dist = fall.interpolate({ inputRange: [0, 1], outputRange: [travel * 0.99, 0] });
+  return (
+    <>
+      {/* Trails: a strip from the impact point out to the upper right, shifted so it starts at the fireball. */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          left: center.x - travel,
+          top: center.y - TH / 2,
+          width: travel * 2,
+          height: TH,
+          overflow: 'hidden',
+          opacity: trailFade,
+          transform: [{ rotate: '-45deg' }],
+        }}
+      >
+        <Animated.View style={{ position: 'absolute', left: travel, top: 0, width: travel, height: TH, transform: [{ translateX: dist }] }}>
+          <Svg width={travel} height={TH}>
+            <Defs>
+              <LinearGradient id="smoke" x1="0" y1="0" x2="1" y2="0">
+                <Stop offset="0" stopColor="#D8DCE6" stopOpacity="0.35" />
+                <Stop offset="0.5" stopColor="#B9BFCC" stopOpacity="0.16" />
+                <Stop offset="1" stopColor="#B9BFCC" stopOpacity="0" />
+              </LinearGradient>
+              <LinearGradient id="burn" x1="0" y1="0" x2="1" y2="0">
+                <Stop offset="0" stopColor={tail[0]} stopOpacity="1" />
+                <Stop offset="0.12" stopColor={tail[1]} stopOpacity="0.75" />
+                <Stop offset="0.45" stopColor={tail[1]} stopOpacity="0.15" />
+                <Stop offset="1" stopColor={tail[1]} stopOpacity="0" />
+              </LinearGradient>
+            </Defs>
+            <Line x1={0} y1={TH / 2} x2={travel} y2={TH / 2} stroke="url(#smoke)" strokeWidth={TH * 0.7} strokeLinecap="round" />
+            <Line x1={0} y1={TH / 2} x2={travel * 0.6} y2={TH / 2} stroke="url(#burn)" strokeWidth={2.4} strokeLinecap="round" />
+          </Svg>
+        </Animated.View>
+      </Animated.View>
+
+      {/* The fireball: soft flickering glow around a white-hot core. */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          left: center.x - G,
+          top: center.y - G,
+          width: G * 2,
+          height: G * 2,
+          opacity: meteorOpacity,
+          transform: [{ translateX: meteorX }, { translateY: meteorY }],
+        }}
+      >
+        <Animated.View
+          style={{
+            position: 'absolute', left: 0, top: 0, right: 0, bottom: 0,
+            opacity: flicker.interpolate({ inputRange: [0, 1], outputRange: [0.75, 1] }),
+            transform: [{ scale: flicker.interpolate({ inputRange: [0, 1], outputRange: [0.88, 1.08] }) }],
+          }}
+        >
+          <Svg width={G * 2} height={G * 2}>
+            <Defs>
+              <RadialGradient id="bloom" cx="50%" cy="50%" r="50%">
+                <Stop offset="0" stopColor="#FFFFFF" stopOpacity="1" />
+                <Stop offset="0.12" stopColor={head[0]} stopOpacity="0.95" />
+                <Stop offset="0.3" stopColor={head[1]} stopOpacity="0.5" />
+                <Stop offset="0.6" stopColor={head[2]} stopOpacity="0.16" />
+                <Stop offset="1" stopColor={head[2]} stopOpacity="0" />
+              </RadialGradient>
+            </Defs>
+            <Circle cx={G} cy={G} r={G} fill="url(#bloom)" />
+          </Svg>
+        </Animated.View>
+        <Svg width={G * 2} height={G * 2} style={StyleSheet.absoluteFill}>
+          <Circle cx={G} cy={G} r={3.2} fill="#FFFFFF" />
+        </Svg>
+      </Animated.View>
+    </>
   );
 }
 

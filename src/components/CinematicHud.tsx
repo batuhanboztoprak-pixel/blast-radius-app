@@ -5,7 +5,7 @@ import { t } from '../i18n/core';
 import { dec, formatDistance, formatEnergyMt, formatPeople, formatSpeed, type Units } from '../physics/format';
 import { colors, fonts } from '../theme';
 
-export type CinePhase = 'entry' | 'fall' | 'impact' | 'done';
+export type CinePhase = 'fall' | 'impact' | 'done';
 
 interface Props {
   phase: CinePhase | null;
@@ -82,8 +82,7 @@ export function CinematicHud({
     }).start();
   }, [phase, fade]);
 
-  // During the entry the full-screen opening shot shows its own readout.
-  if (!phase || phase === 'entry') return null;
+  if (!phase) return null;
   const elapsed = Math.max(0, now - since);
 
   const endAlt = airburstAltitudeM ?? 0;

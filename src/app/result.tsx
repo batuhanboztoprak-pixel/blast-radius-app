@@ -12,7 +12,6 @@ import { GlobeView } from '../components/GlobeView';
 import { GLOBE_AVAILABLE_ABOVE_M, GLOBE_DEFAULT_ABOVE_M } from '../components/globe';
 import { CinematicHud, type CinePhase } from '../components/CinematicHud';
 import { CloudPass } from '../components/CloudPass';
-import { EntrySequence } from '../components/EntrySequence';
 import { CINE_FALL, ImpactMap } from '../components/ImpactMap';
 import { RingLegend } from '../components/RingLegend';
 import { BackIcon, LockIcon, ShareIcon } from '../components/icons';
@@ -45,10 +44,10 @@ import { colors, fonts, radius } from '../theme';
 
 const ringRadius = (rings: Ring[], kind: Ring['kind']) => rings.find((r) => r.kind === kind);
 
-const WHOOSH = require('../../assets/sounds/whoosh.m4a');
 const BOOM = require('../../assets/sounds/boom.m4a');
 const RUMBLE = require('../../assets/sounds/rumble.m4a');
-const ENTRY = require('../../assets/sounds/entry.m4a');
+/** A deep roar with crackling that swells as the fireball comes down. */
+const ROAR = require('../../assets/sounds/entry.m4a');
 
 export default function Result() {
   const { result, location, presetId, realAsteroid } = useSimulation();
@@ -83,12 +82,9 @@ export default function Result() {
 
   // Cinematic strike: heads-up display state and sound players.
   const [cine, setCine] = useState<{ phase: CinePhase; at: number } | null>(null);
-  const whoosh = useAudioPlayer(WHOOSH);
   const boom = useAudioPlayer(BOOM);
   const rumble = useAudioPlayer(RUMBLE);
-  const entry = useAudioPlayer(ENTRY);
-  /** The full-screen opening shot of the cinematic strike (keyed per strike). */
-  const [entryShot, setEntryShot] = useState<number | null>(null);
+  const roar = useAudioPlayer(ROAR);
   /** Pro was bought while this result was on screen: replay it cinematically. */
   const [proAtOpen] = useState(isPro);
   const upgradedHere = isPro && !proAtOpen;
@@ -159,16 +155,12 @@ export default function Result() {
   // --- Cinematic strike: heads-up display and sound -------------------------
   const onCinematicPhase = (phase: CinePhase) => {
     setCine({ phase, at: Date.now() });
-    if (phase === 'entry') setEntryShot(Date.now());
     try {
-      if (phase === 'entry') {
-        entry.seekTo(0);
-        entry.play();
-      } else if (phase === 'fall') {
-        whoosh.seekTo(0);
-        whoosh.play();
+      if (phase === 'fall') {
+        roar.seekTo(0);
+        roar.play();
       } else if (phase === 'impact') {
-        whoosh.pause();
+        roar.pause();
         boom.seekTo(0);
         boom.play();
         rumble.seekTo(0);
@@ -181,7 +173,6 @@ export default function Result() {
 
   const replay = () => {
     setCine(null);
-    setEntryShot(null);
     setFocus(null);
     closeStage();
     setView('map');
@@ -463,16 +454,6 @@ export default function Result() {
         <PrimaryButton label={t('common.share')} onPress={() => router.push('/share')} style={styles.flex} />
       </View>
       <AdBanner />
-      {entryShot !== null && (
-        <EntrySequence
-          key={entryShot}
-          composition={result.params.composition}
-          velocityMs={result.params.velocityMs}
-          units={units}
-          top={insets.top + 100}
-          onDone={() => setEntryShot(null)}
-        />
-      )}
     </SafeAreaView>
   );
 }
