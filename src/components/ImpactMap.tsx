@@ -10,7 +10,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import MapView, { Circle, Marker, type Region } from 'react-native-maps';
+import MapView, { Circle, Marker, Overlay, type Region } from 'react-native-maps';
 
 import { t } from '../i18n/core';
 import type { Composition, Ring } from '../physics/impact';
@@ -58,6 +58,13 @@ interface Props {
 }
 
 const EARTH_RADIUS_M = 6.371e6;
+/**
+ * A fresh crater drawn on the map at its true size: shaded bowl, raised rim,
+ * glowing melt and ejecta rays. The image spans 3 crater radii (rim at 1/3).
+ */
+const CRATER_IMAGE = require('../../assets/crater.png');
+const CRATER_IMAGE_SPAN = 3;
+const M_PER_DEG_LAT = 111_320;
 
 
 /** Cinematic timeline, ms. */
@@ -188,6 +195,19 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectKey, ready]);
+
+  const craterM = rings.find((r) => r.kind === 'crater')?.radiusM ?? 0;
+  const craterBounds: [[number, number], [number, number]] | null = (() => {
+    if (craterM < 20) return null;
+    const span = craterM * CRATER_IMAGE_SPAN;
+    const dLat = span / M_PER_DEG_LAT;
+    const dLon = span / (M_PER_DEG_LAT * Math.max(Math.cos((location.latitude * Math.PI) / 180), 0.05));
+    if (dLat > 60) return null; // too big to draw as a flat image
+    return [
+      [location.latitude + dLat, location.longitude - dLon],
+      [location.latitude - dLat, location.longitude + dLon],
+    ];
+  })();
 
   const frameRadius = focusRadiusM ?? rings[0]?.radiusM ?? FALLBACK_FRAME_RADIUS_M;
   const region = regionForRadius(location.latitude, location.longitude, frameRadius);
@@ -401,6 +421,9 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
               strokeWidth={1.5}
             />
           ))}
+        {craterBounds && !ringsHidden && (growth === null || growth > 0) && (
+          <Overlay image={CRATER_IMAGE} bounds={craterBounds} />
+        )}
         {!ringsHidden &&
           !(hideRings && growth === null) &&
           rings.map((ring) => {
@@ -412,7 +435,8 @@ export const ImpactMap = forwardRef<MapView | null, Props>(function ImpactMap(
                 key={ring.kind}
                 center={location}
                 radius={radius}
-                fillColor={s.fill}
+                // The crater image fills the crater; keep just its outline.
+                fillColor={ring.kind === 'crater' && craterBounds ? 'rgba(0,0,0,0)' : s.fill}
                 strokeColor={s.stroke}
                 strokeWidth={2}
               />
