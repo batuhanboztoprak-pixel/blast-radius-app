@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Animated, Easing, StyleSheet } from 'react-native';
 import Svg, { Defs, Ellipse, RadialGradient, Stop } from 'react-native-svg';
 
-import { FALL_START_ALT_M, fallLeft, type CinePhase } from './CinematicHud';
+import { FALL_START_ALT_M, type CinePhase } from './CinematicHud';
 
 /** The cloud layer: puffs appear from about this altitude down. */
 const CLOUD_TOP_M = 14_000;
