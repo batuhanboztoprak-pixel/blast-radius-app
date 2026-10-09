@@ -170,8 +170,11 @@ export function StrikeAnimation({
   }, []);
 
   // The meteor comes in from the upper right at 45°, like the default entry angle.
-  const meteorX = fall.interpolate({ inputRange: [0, 1], outputRange: [travel * 0.7, 0] });
-  const meteorY = fall.interpolate({ inputRange: [0, 1], outputRange: [-travel * 0.7, 0] });
+  // The cinematic fireball starts at the screen's corner so it's in view the
+  // whole way down; the standard meteor streaks in from further out.
+  const startD = cine ? Math.hypot(width, height) * 0.5 * 1.02 : travel * 0.99;
+  const meteorX = fall.interpolate({ inputRange: [0, 1], outputRange: [startD * 0.7071, 0] });
+  const meteorY = fall.interpolate({ inputRange: [0, 1], outputRange: [-startD * 0.7071, 0] });
   const meteorOpacity = fall.interpolate({ inputRange: [0, 0.98, 1], outputRange: [1, 1, 0] });
 
   return (
@@ -268,6 +271,7 @@ export function StrikeAnimation({
         <RealisticFall
           center={center}
           travel={travel}
+          startD={startD}
           fall={fall}
           trailFade={trailFade}
           flicker={flicker}
@@ -361,6 +365,7 @@ export function StrikeAnimation({
 function RealisticFall({
   center,
   travel,
+  startD,
   fall,
   trailFade,
   flicker,
@@ -372,6 +377,7 @@ function RealisticFall({
 }: {
   center: { x: number; y: number };
   travel: number;
+  startD: number;
   fall: Animated.Value;
   trailFade: Animated.Value;
   flicker: Animated.Value;
@@ -381,10 +387,10 @@ function RealisticFall({
   head: [string, string, string];
   tail: [string, string];
 }) {
-  const TH = 22; // trail strip thickness (the smoke is the widest part)
-  const G = 46; // glow radius
+  const TH = 34; // trail strip thickness (the smoke is the widest part)
+  const G = 72; // glow radius
   // Distance from the impact point back to the fireball, along its path.
-  const dist = fall.interpolate({ inputRange: [0, 1], outputRange: [travel * 0.99, 0] });
+  const dist = fall.interpolate({ inputRange: [0, 1], outputRange: [startD, 0] });
   return (
     <>
       {/* Trails: a strip from the impact point out to the upper right, shifted so it starts at the fireball. */}
@@ -404,8 +410,8 @@ function RealisticFall({
           <Svg width={travel} height={TH}>
             <Defs>
               <LinearGradient id="smoke" x1="0" y1="0" x2="1" y2="0">
-                <Stop offset="0" stopColor="#D8DCE6" stopOpacity="0.35" />
-                <Stop offset="0.5" stopColor="#B9BFCC" stopOpacity="0.16" />
+                <Stop offset="0" stopColor="#E4E8F0" stopOpacity="0.55" />
+                <Stop offset="0.5" stopColor="#C4CAD6" stopOpacity="0.24" />
                 <Stop offset="1" stopColor="#B9BFCC" stopOpacity="0" />
               </LinearGradient>
               <LinearGradient id="burn" x1="0" y1="0" x2="1" y2="0">
@@ -415,8 +421,11 @@ function RealisticFall({
                 <Stop offset="1" stopColor={tail[1]} stopOpacity="0" />
               </LinearGradient>
             </Defs>
-            <Line x1={0} y1={TH / 2} x2={travel} y2={TH / 2} stroke="url(#smoke)" strokeWidth={TH * 0.7} strokeLinecap="round" />
-            <Line x1={0} y1={TH / 2} x2={travel * 0.6} y2={TH / 2} stroke="url(#burn)" strokeWidth={2.4} strokeLinecap="round" />
+            {/* Stacked strokes, widest and faintest first, give the smoke soft edges. */}
+            <Line x1={0} y1={TH / 2} x2={travel} y2={TH / 2} stroke="url(#smoke)" strokeWidth={TH * 0.95} strokeLinecap="round" strokeOpacity={0.25} />
+            <Line x1={0} y1={TH / 2} x2={travel} y2={TH / 2} stroke="url(#smoke)" strokeWidth={TH * 0.6} strokeLinecap="round" strokeOpacity={0.45} />
+            <Line x1={0} y1={TH / 2} x2={travel} y2={TH / 2} stroke="url(#smoke)" strokeWidth={TH * 0.28} strokeLinecap="round" strokeOpacity={0.7} />
+            <Line x1={0} y1={TH / 2} x2={travel * 0.6} y2={TH / 2} stroke="url(#burn)" strokeWidth={4} strokeLinecap="round" />
           </Svg>
         </Animated.View>
       </Animated.View>
@@ -444,9 +453,9 @@ function RealisticFall({
             <Defs>
               <RadialGradient id="bloom" cx="50%" cy="50%" r="50%">
                 <Stop offset="0" stopColor="#FFFFFF" stopOpacity="1" />
-                <Stop offset="0.12" stopColor={head[0]} stopOpacity="0.95" />
-                <Stop offset="0.3" stopColor={head[1]} stopOpacity="0.5" />
-                <Stop offset="0.6" stopColor={head[2]} stopOpacity="0.16" />
+                <Stop offset="0.1" stopColor={head[0]} stopOpacity="1" />
+                <Stop offset="0.28" stopColor={head[1]} stopOpacity="0.7" />
+                <Stop offset="0.6" stopColor={head[2]} stopOpacity="0.25" />
                 <Stop offset="1" stopColor={head[2]} stopOpacity="0" />
               </RadialGradient>
             </Defs>
@@ -454,7 +463,7 @@ function RealisticFall({
           </Svg>
         </Animated.View>
         <Svg width={G * 2} height={G * 2} style={StyleSheet.absoluteFill}>
-          <Circle cx={G} cy={G} r={3.2} fill="#FFFFFF" />
+          <Circle cx={G} cy={G} r={5} fill="#FFFFFF" />
         </Svg>
       </Animated.View>
     </>
