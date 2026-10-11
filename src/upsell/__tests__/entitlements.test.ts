@@ -1,10 +1,8 @@
 import {
-  REWARDED_PER_DAY,
-  dayKey,
+  canTryFree,
   planCinematic,
   cinematicAccess,
-  recordReward,
-  rewardsLeft,
+  takeFreeTry,
   EMPTY_STATE,
   EMPTY_STATS,
   accessFor,
@@ -48,7 +46,7 @@ describe('free tries', () => {
   });
 });
 
-describe('rewarded unlocks', () => {
+describe('one-strike tickets', () => {
   it('unlocks a composition for exactly one simulation', () => {
     expect(planSimulation(EMPTY_STATE, iron, false)).toEqual({
       ok: false,
@@ -158,26 +156,35 @@ describe('cinematic strike', () => {
   });
 });
 
-describe('daily rewarded limit', () => {
-  it('allows REWARDED_PER_DAY a day and resets the next day', () => {
-    let s = EMPTY_STATE;
-    for (let i = 0; i < REWARDED_PER_DAY; i++) s = recordReward(s, '2026-09-30');
-    expect(rewardsLeft(s, '2026-09-30')).toBe(0);
-    expect(rewardsLeft(s, '2026-10-01')).toBe(REWARDED_PER_DAY);
-    expect(recordReward(s, '2026-10-01').rewards).toEqual({ day: '2026-10-01', count: 1 });
+describe('free try per item (no ads)', () => {
+  it('offers iron, comet, burns and aftermath once each, never presets or the cinematic', () => {
+    expect(canTryFree(EMPTY_STATE, 'iron', false)).toBe(true);
+    expect(canTryFree(EMPTY_STATE, 'aftermath', false)).toBe(true);
+    expect(canTryFree(EMPTY_STATE, 'cinematic', false)).toBe(false);
+    expect(canTryFree(EMPTY_STATE, 'chicxulub', false)).toBe(false);
+    expect(canTryFree(EMPTY_STATE, 'iron', true)).toBe(false);
   });
 
-  it('uses the local calendar day', () => {
-    expect(dayKey(new Date(2026, 8, 30, 23, 59))).toBe('2026-09-30');
+  it('grants one strike and is not offered again', () => {
+    const s = takeFreeTry(EMPTY_STATE, 'iron');
+    expect(s.tickets).toEqual(['iron']);
+    expect(s.freeTried).toEqual(['iron']);
+    expect(canTryFree(s, 'iron', false)).toBe(false);
+    const plan = planSimulation(s, iron, false);
+    expect(plan).toMatchObject({ ok: true, spent: ['iron'] });
+    if (!plan.ok) throw new Error();
+    expect(canTryFree(plan.next, 'iron', false)).toBe(false);
+    expect(planSimulation(plan.next, iron, false).ok).toBe(false);
+    expect(takeFreeTry(plan.next, 'iron')).toBe(plan.next);
   });
 
   it('persists the new fields and drops bad ones', () => {
-    expect(parseState('{"freeTriesUsed":[],"tickets":["cinematic"],"cinematicTasted":true,"rewards":{"day":"2026-09-30","count":2}}')).toEqual({
+    expect(parseState('{"freeTriesUsed":[],"tickets":["cinematic"],"cinematicTasted":true,"freeTried":["iron","nope"],"rewards":{"day":"2026-09-30","count":2}}')).toEqual({
       freeTriesUsed: [],
       tickets: ['cinematic'],
       cinematicTasted: true,
-      rewards: { day: '2026-09-30', count: 2 },
+      freeTried: ['iron'],
     });
-    expect(parseState('{"freeTriesUsed":[],"tickets":[],"rewards":{"day":5}}')).toEqual(EMPTY_STATE);
+    expect(parseState('{"freeTriesUsed":[],"tickets":[],"freeTried":5}')).toEqual(EMPTY_STATE);
   });
 });

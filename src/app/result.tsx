@@ -4,8 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AdBanner } from '../ads/AdBanner';
-import { useAds } from '../ads/ads';
 import { AftermathTimeline, StageCaption } from '../components/AftermathTimeline';
 import { TINT_COLOR, stageLayers } from '../components/aftermathLayers';
 import { GlobeView } from '../components/GlobeView';
@@ -17,7 +15,7 @@ import { RingLegend } from '../components/RingLegend';
 import { BackIcon, LockIcon, ShareIcon } from '../components/icons';
 import { visibleRings } from '../components/rings';
 import { LockedStatCard, PrimaryButton, SecondaryButton, StatCard } from '../components/ui';
-import { AdNudgeCard, FreeTryCard } from '../components/UpsellCards';
+import { FreeTryCard } from '../components/UpsellCards';
 import { PopulationCard } from '../components/PopulationCard';
 import { t } from '../i18n/core';
 import {
@@ -51,8 +49,7 @@ const ROAR = require('../../assets/sounds/entry.m4a');
 
 export default function Result() {
   const { result, location, presetId, realAsteroid } = useSimulation();
-  const { isPro, price } = usePremium();
-  const { postAdNudge, dismissNudge } = useAds();
+  const { isPro } = usePremium();
   const upsell = useUpsell();
   const { run, unlockForRun } = upsell;
   const { width, height } = useWindowDimensions();
@@ -439,21 +436,10 @@ export default function Result() {
         </View>
       </ScrollView>
 
-      {postAdNudge && (
-        <AdNudgeCard
-          price={price}
-          onPress={() => {
-            dismissNudge();
-            upsell.openPaywall('ads', 'ad-nudge');
-          }}
-          onDismiss={dismissNudge}
-        />
-      )}
       <View style={styles.footer}>
         <SecondaryButton label={t('result.tryAgain')} onPress={() => router.back()} style={styles.flex} />
         <PrimaryButton label={t('common.share')} onPress={() => router.push('/share')} style={styles.flex} />
       </View>
-      <AdBanner />
     </SafeAreaView>
   );
 }

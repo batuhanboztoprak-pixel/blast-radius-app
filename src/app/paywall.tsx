@@ -16,17 +16,15 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
-import { useAds } from '../ads/ads';
 import { FEATURE_TINT, FeatureGlyph } from '../components/FeatureGlyph';
 import { CheckIcon, CloseIcon } from '../components/icons';
 import { PAYWALL_BG, PaywallHero } from '../components/PaywallHero';
-import { ADS_CONFIGURED, PRIVACY_POLICY_URL, TERMS_URL } from '../config';
+import { PRIVACY_POLICY_URL, TERMS_URL } from '../config';
 import { t, type MessageKey } from '../i18n/core';
 import { PRESETS } from '../physics/presets';
 import { usePremium } from '../state/premium';
 import { useSimulation } from '../state/simulation';
 import {
-  REWARDED_PER_DAY,
   isFeature,
   isLockedItem,
   isPresetId,
@@ -43,12 +41,8 @@ const PERKS: Record<Feature, { title: MessageKey; body: MessageKey }> = {
   cinematic: { title: 'paywall.cinematic', body: 'paywall.cinematicBody' },
   aftermath: { title: 'paywall.aftermath', body: 'paywall.aftermathBody' },
   asteroids: { title: 'paywall.asteroids', body: 'paywall.asteroidsBody' },
-  ads: { title: 'paywall.noAds', body: 'paywall.noAdsBody' },
 };
-// "No ads" is only a perk when the free version actually shows ads.
-const PERK_ORDER: Feature[] = (['cinematic', 'asteroids', 'aftermath', 'ads', 'compositions', 'burns', 'presets'] as Feature[]).filter(
-  (f) => f !== 'ads' || ADS_CONFIGURED,
-);
+const PERK_ORDER: Feature[] = ['cinematic', 'asteroids', 'aftermath', 'compositions', 'burns', 'presets'];
 
 /** Free vs Pro rows. `true` = included, `false` = not, a key = short text. */
 type CompareRow = { row: MessageKey; free: boolean | MessageKey; pro: boolean | MessageKey };
@@ -63,9 +57,8 @@ const ALL_COMPARE: CompareRow[] = [
   { row: 'compare.ironComet', free: false, pro: true },
   { row: 'compare.burns', free: false, pro: true },
   { row: 'compare.presets', free: 'compare.presetsFree', pro: true },
-  { row: 'compare.ads', free: 'compare.adsFree', pro: 'compare.adsPro' },
 ];
-const COMPARE = ALL_COMPARE.filter((r) => r.row !== 'compare.ads' || ADS_CONFIGURED);
+const COMPARE = ALL_COMPARE;
 
 const GLASS = 'rgba(255,255,255,0.045)';
 const GLASS_BORDER = 'rgba(255,255,255,0.09)';
@@ -78,33 +71,21 @@ export default function Paywall() {
   const item: LockedItem | null = isLockedItem(params.item) ? params.item : null;
 
   const { isPro, price, busy, error, purchase, restore, setDevPro } = usePremium();
-  const { showPrivacyOptions, rewardedReady, showRewarded } = useAds();
-  const { grant, rewardsLeftToday } = useUpsell();
+  const { canTryFree, tryFree } = useUpsell();
   const { updateParams, applyPreset } = useSimulation();
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const [watching, setWatching] = useState(false);
-  const [rewardNote, setRewardNote] = useState<string | null>(null);
 
   useEffect(() => {
     if (isPro) router.back();
   }, [isPro]);
 
-  // Only offer a rewarded try for a specific item, and only when an ad is loaded.
-  const canWatch = !!item && !isPro && rewardedReady && rewardsLeftToday > 0;
-  const limitReached = !!item && !isPro && rewardsLeftToday === 0;
+  // One free try of a specific locked item (iron, comet, burns, aftermath), once ever.
+  const canTry = !!item && canTryFree(item);
 
-  async function watchToTry() {
+  function tryOnce() {
     if (!item) return;
-    setWatching(true);
-    setRewardNote(null);
-    const earned = await showRewarded();
-    setWatching(false);
-    if (!earned) {
-      setRewardNote(t('reward.notEarned'));
-      return;
-    }
-    grant(item);
+    tryFree(item);
     // Select what they just unlocked so the next Simulate uses it.
     if (item === 'iron' || item === 'comet') updateParams({ composition: item });
     else if (isPresetId(item)) {
@@ -114,7 +95,7 @@ export default function Paywall() {
     router.back();
   }
 
-  const shown: Feature | null = feature === 'ads' && !ADS_CONFIGURED ? null : feature;
+  const shown: Feature | null = feature;
   const perks = shown ? [shown, ...PERK_ORDER.filter((f) => f !== shown)] : PERK_ORDER;
   const title = shown ? t(`paywall.hero.${shown}.title`) : t('paywall.title');
   const subtitle = shown ? t(`paywall.hero.${shown}.body`) : t('paywall.subtitle');
@@ -176,7 +157,6 @@ export default function Paywall() {
         </View>
 
         {error && <Text style={styles.error}>{error}</Text>}
-        {rewardNote && <Text style={styles.error}>{rewardNote}</Text>}
       </ScrollView>
 
       {/* Close: floating over the hero. */}
@@ -218,16 +198,15 @@ export default function Paywall() {
         </View>
         {!price && !busy && !isPro && <Text style={styles.storeNote}>{t('paywall.storeLoading')}</Text>}
 
-        <BuyButton label={t('paywall.unlock')} onPress={purchase} loading={busy} disabled={watching} />
+        <BuyButton label={t('paywall.unlock')} onPress={purchase} loading={busy} disabled={false} />
 
-        {canWatch && (
-          <Pressable onPress={watchToTry} disabled={watching || busy} accessibilityRole="button" style={styles.watch} hitSlop={6}>
+        {canTry && (
+          <Pressable onPress={tryOnce} disabled={busy} accessibilityRole="button" style={styles.watch} hitSlop={6}>
             <Text style={styles.watchText}>
-              {t('reward.watch')} · <Text style={styles.watchLeft}>{t('reward.left', { n: rewardsLeftToday })}</Text>
+              {t('paywall.tryFree')} · <Text style={styles.watchLeft}>{t('paywall.tryFreeNote')}</Text>
             </Text>
           </Pressable>
         )}
-        {limitReached && <Text style={styles.triesLeft}>{t('reward.limit', { n: REWARDED_PER_DAY })}</Text>}
 
         <View style={styles.links}>
           <Pressable onPress={restore} disabled={busy} accessibilityRole="button" hitSlop={8}>
@@ -243,11 +222,6 @@ export default function Paywall() {
             <Text style={styles.link}>{t('paywall.privacyPolicy')}</Text>
           </Pressable>
         </View>
-        {showPrivacyOptions && (
-          <Pressable onPress={showPrivacyOptions} accessibilityRole="button" hitSlop={8} style={{ alignSelf: 'center' }}>
-            <Text style={styles.link}>{t('paywall.privacy')}</Text>
-          </Pressable>
-        )}
         <Text style={styles.legal}>{t('paywall.legal')}</Text>
         {__DEV__ && (
           // Development builds only (never in TestFlight or the App Store): unlock Pro for screenshots and testing.
@@ -479,7 +453,6 @@ const styles = StyleSheet.create({
   watch: { alignSelf: 'center', paddingVertical: 2 },
   watchText: { fontSize: 13, color: colors.text, fontFamily: fonts.bodySemi, textAlign: 'center' },
   watchLeft: { color: colors.muted, fontFamily: fonts.body },
-  triesLeft: { fontSize: 12, color: colors.muted, fontFamily: fonts.body, textAlign: 'center' },
   links: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   link: { color: colors.muted, fontSize: 12, fontFamily: fonts.bodyMedium },
   dot: { color: colors.dim, fontSize: 12 },

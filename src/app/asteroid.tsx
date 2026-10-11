@@ -5,8 +5,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { InteractionManager, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AdBanner } from '../ads/AdBanner';
-import { useAds } from '../ads/ads';
 import { CompositionIcon } from '../components/CompositionIcon';
 import { Chip, PrimaryButton, StepHeader } from '../components/ui';
 import { t } from '../i18n/core';
@@ -55,7 +53,6 @@ export default function SetAsteroid() {
   const { params, updateParams, presetId, applyPreset, clearPreset, presetEpoch, result, location, realAsteroid } = useSimulation();
   const { isPro } = usePremium();
   const upsell = useUpsell();
-  const { onSimulation, dismissNudge } = useAds();
   const { recordStrike } = useWorld();
   const { units, setUnits } = useUnits();
   const [simulating, setSimulating] = useState(false);
@@ -112,8 +109,6 @@ export default function SetAsteroid() {
       return;
     }
     upsell.beginRun(plan, strikeStyle === 'cinematic');
-    // A "Remove ads" card from an earlier strike never carries over to this one.
-    dismissNudge();
     setSimulating(true);
     if (result && location) {
       recordStrike((survivors) =>
@@ -121,12 +116,8 @@ export default function SetAsteroid() {
       );
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-    try {
-      await onSimulation();
-    } finally {
-      setSimulating(false);
-      router.push('/result');
-    }
+    setSimulating(false);
+    router.push('/result');
   }
 
   return (
@@ -306,7 +297,6 @@ export default function SetAsteroid() {
       <View style={styles.footer}>
         <PrimaryButton label={t('asteroid.simulate')} onPress={simulate} loading={simulating} />
       </View>
-      <AdBanner />
     </SafeAreaView>
   );
 }

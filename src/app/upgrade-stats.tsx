@@ -37,7 +37,7 @@ export default function UpgradeStatsScreen() {
             <Switch value={devPro} onValueChange={setDevPro} />
           </View>
           <Pressable onPress={resetForTesting} accessibilityRole="button">
-            <Text style={styles.resetText}>Reset free tries, cinematic taste, tickets, today’s ad count and the welcome cards</Text>
+            <Text style={styles.resetText}>Reset free tries, cinematic taste, tickets and the welcome cards</Text>
           </Pressable>
         </Section>
         <Section title={`${t('debug.opened')} → ${t('debug.purchased')}`}>
@@ -57,7 +57,7 @@ export default function UpgradeStatsScreen() {
           <Row k="freeTriesUsed" v={state.freeTriesUsed.join(', ') || '–'} />
           <Row k="tickets" v={state.tickets.join(', ') || '–'} />
           <Row k="cinematicTasted" v={state.cinematicTasted ? 'yes' : 'no'} />
-          <Row k="rewards" v={state.rewards ? `${state.rewards.count} on ${state.rewards.day}` : '–'} />
+          <Row k="freeTried" v={state.freeTried?.join(', ') || '–'} />
         </Section>
         <Pressable onPress={resetStats} accessibilityRole="button" style={styles.reset}>
           <Text style={styles.resetText}>{t('debug.reset')}</Text>

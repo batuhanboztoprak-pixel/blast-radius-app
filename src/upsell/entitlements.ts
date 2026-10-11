@@ -3,12 +3,11 @@
  * React Native imports) so it can be unit-tested; src/upsell/upsell.tsx holds
  * the state and persists it.
  *
- * Free users get:
+ * Free users get (no ads anywhere):
  *  - one free strike with each Pro preset ("free try"), remembered forever;
- *  - a one-strike "ticket" for any locked item after watching a rewarded ad.
- *    Tickets are granted only when the ad's reward event fires and are spent by
- *    the next simulation that uses the item. At most REWARDED_PER_DAY a day, so
- *    ads let people sample Pro without replacing it;
+ *  - one free try of iron, comet, the burns ring and the full aftermath: from
+ *    the paywall, "Try it once free" grants a one-strike "ticket", spent by the
+ *    next simulation (or the strike on screen) that uses the item;
  *  - the cinematic strike on their very first simulation, as a taste.
  */
 import type { Composition } from '../physics/impact';
@@ -19,22 +18,22 @@ export const PRESET_IDS: PresetId[] = ['tunguska', 'chelyabinsk', 'chicxulub'];
 /** Anything a free user can see but not use. */
 export type LockedItem = 'iron' | 'comet' | 'burns' | 'cinematic' | 'aftermath' | PresetId;
 
-/** Paywall topics; `ads` and `asteroids` (the full list of real NASA asteroids) have no item to try. */
-export type Feature = 'burns' | 'compositions' | 'presets' | 'cinematic' | 'aftermath' | 'asteroids' | 'ads';
-export const FEATURES: Feature[] = ['burns', 'compositions', 'presets', 'cinematic', 'aftermath', 'asteroids', 'ads'];
+/** Paywall topics; `asteroids` (the full list of real NASA asteroids) has no item to try. */
+export type Feature = 'burns' | 'compositions' | 'presets' | 'cinematic' | 'aftermath' | 'asteroids';
+export const FEATURES: Feature[] = ['burns', 'compositions', 'presets', 'cinematic', 'aftermath', 'asteroids'];
 
-/** Rewarded-ad unlocks a free user can earn per calendar day. */
-export const REWARDED_PER_DAY = 3;
+/** Items with a one-off "Try it once free" (presets and the cinematic have their own free strike). */
+export const FREE_TRY_ITEMS: LockedItem[] = ['iron', 'comet', 'burns', 'aftermath'];
 
 export interface UpsellState {
   /** Presets whose free strike has been used. */
   freeTriesUsed: PresetId[];
-  /** Rewarded-ad unlocks waiting to be spent, one strike each. */
+  /** Free-try unlocks waiting to be spent, one strike each. */
   tickets: LockedItem[];
   /** The one-off cinematic strike has been shown. */
   cinematicTasted?: boolean;
-  /** Rewarded unlocks earned on `day` (local YYYY-MM-DD). */
-  rewards?: { day: string; count: number };
+  /** Items whose "Try it once free" has been used. */
+  freeTried?: LockedItem[];
 }
 
 export const EMPTY_STATE: UpsellState = { freeTriesUsed: [], tickets: [] };
@@ -100,7 +99,7 @@ export type SimulationPlan =
 
 /**
  * Decide whether a free user may simulate `sel`, and what it costs. A ticket is
- * spent before a free try, so watching an ad never wastes the free strike.
+ * spent before a preset's free strike, so neither is wasted.
  */
 export function planSimulation(s: UpsellState, sel: Selection, isPro: boolean): SimulationPlan {
   if (isPro) return { ok: true, next: s, freeTry: null, spent: [] };
@@ -133,7 +132,7 @@ export function cinematicAccess(s: UpsellState, isPro: boolean): CinematicAccess
 
 /**
  * Whether this strike plays the cinematic sequence, when the user chose it
- * (`wanted`): always for Pro, or by spending a rewarded ticket, or the one-off
+ * (`wanted`): always for Pro, or by spending a ticket, or the one-off
  * taste. A ticket is spent before the taste so the free one isn't wasted.
  * Choosing "Standard" spends nothing.
  */
@@ -149,25 +148,19 @@ export function planCinematic(
   return { cinematic: false, next: s };
 }
 
-/** Local calendar day, e.g. "2026-09-30". */
-export function dayKey(d: Date): string {
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+/** Whether a free user can still "Try it once free" for this item. */
+export function canTryFree(s: UpsellState, item: LockedItem, isPro: boolean): boolean {
+  if (isPro || !FREE_TRY_ITEMS.includes(item)) return false;
+  return !(s.freeTried ?? []).includes(item) && !hasTicket(s, item);
 }
 
-/** Rewarded unlocks still available today. */
-export function rewardsLeft(s: UpsellState, today: string): number {
-  const used = s.rewards?.day === today ? s.rewards.count : 0;
-  return Math.max(0, REWARDED_PER_DAY - used);
+/** Use the item's one free try: a one-strike ticket, remembered so it's offered once. */
+export function takeFreeTry(s: UpsellState, item: LockedItem): UpsellState {
+  if (!FREE_TRY_ITEMS.includes(item) || (s.freeTried ?? []).includes(item)) return s;
+  return { ...grantTicket(s, item), freeTried: [...(s.freeTried ?? []), item] };
 }
 
-/** Count one rewarded unlock against today's limit. */
-export function recordReward(s: UpsellState, today: string): UpsellState {
-  const count = s.rewards?.day === today ? s.rewards.count + 1 : 1;
-  return { ...s, rewards: { day: today, count } };
-}
-
-/** Grant a one-strike unlock. Call only after the rewarded ad's reward event. */
+/** Grant a one-strike unlock. */
 export function grantTicket(s: UpsellState, item: LockedItem): UpsellState {
   return hasTicket(s, item) ? s : { ...s, tickets: [...s.tickets, item] };
 }
@@ -207,10 +200,8 @@ export function parseState(raw: string | null): UpsellState {
       tickets: list(v.tickets, isLockedItem),
     };
     if (v.cinematicTasted === true) out.cinematicTasted = true;
-    const r = v.rewards as { day?: unknown; count?: unknown } | undefined;
-    if (r && typeof r.day === 'string' && typeof r.count === 'number' && r.count >= 0) {
-      out.rewards = { day: r.day, count: Math.floor(r.count) };
-    }
+    const tried = list(v.freeTried, isLockedItem);
+    if (tried.length) out.freeTried = tried;
     return out;
   } catch {
     return EMPTY_STATE;
@@ -260,7 +251,7 @@ export function isUpgradeSource(x: unknown): x is UpgradeSource {
 export interface UpgradeStats {
   opened: Partial<Record<UpgradeSource, number>>;
   purchased: Partial<Record<UpgradeSource, number>>;
-  /** Tries unlocked by watching a rewarded ad, per item. */
+  /** Free tries used, per item (key kept as "rewarded" for saved stats). */
   rewarded: Partial<Record<LockedItem, number>>;
 }
 

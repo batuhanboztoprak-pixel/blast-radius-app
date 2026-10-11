@@ -15,7 +15,6 @@ import {
 import MapView, { Circle, Marker, type LatLng } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AdBanner } from '../ads/AdBanner';
 import { LocateIcon, SearchIcon } from '../components/icons';
 import { RealAsteroidCard } from '../components/RealAsteroidCard';
 import { IconButton, PrimaryButton, StepHeader } from '../components/ui';
@@ -200,7 +199,6 @@ export default function PickLocation() {
           </Pressable>
         </View>
       </View>
-      <AdBanner />
     </SafeAreaView>
   );
 }

@@ -7,7 +7,6 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { AdsProvider } from '../ads/ads';
 import { INTRO_BG, IntroSplash } from '../components/IntroSplash';
 import { Welcome, needsWelcome } from '../components/Welcome';
 import { initI18n } from '../i18n/detect';
@@ -44,7 +43,6 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <PremiumProvider>
-        <AdsProvider>
           <UnitsProvider>
             <SimulationProvider>
               <WorldProvider>
@@ -72,7 +70,6 @@ export default function RootLayout() {
               </WorldProvider>
             </SimulationProvider>
           </UnitsProvider>
-        </AdsProvider>
       </PremiumProvider>
     </SafeAreaProvider>
   );
