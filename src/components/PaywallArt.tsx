@@ -8,7 +8,6 @@ import Svg, {
   LinearGradient,
   Path,
   RadialGradient,
-  Rect,
   Stop,
 } from 'react-native-svg';
 
@@ -33,7 +32,6 @@ export function PaywallArt({ feature, width }: { feature: Feature; width: number
       {feature === 'burns' && <BurnsArt width={width} />}
       {feature === 'presets' && <PresetsArt />}
       {feature === 'compositions' && <CompositionsArt width={width} />}
-      {feature === 'ads' && <AdsArt width={width} />}
       {feature === 'cinematic' && <CinematicArt width={width} />}
       {feature === 'aftermath' && <AftermathArt width={width} />}
       {feature === 'asteroids' && <AsteroidsArt width={width} />}
@@ -283,22 +281,6 @@ function CompositionsArt({ width }: { width: number }) {
         <Text style={[styles.label, { left: right - 60 }]}>{t('composition.comet')}</Text>
       </View>
     </>
-  );
-}
-
-function AdsArt({ width }: { width: number }) {
-  const w = 86;
-  const x = width / 2 - w / 2;
-  return (
-    <Svg width={width} height={H}>
-      <Rect x={x} y={8} width={w} height={H - 16} rx={14} fill={colors.surface} stroke={colors.border} strokeWidth={1.5} />
-      <Rect x={x + 10} y={24} width={w - 20} height={40} rx={6} fill="rgba(74,158,255,0.15)" />
-      <Circle cx={width / 2} cy={44} r={9} fill={RING_STYLE.severe.fill} stroke={RING_STYLE.severe.stroke} />
-      <Rect x={x + 10} y={H - 44} width={w - 20} height={20} rx={4} fill="rgba(255,196,74,0.25)" />
-      <G stroke={colors.accent} strokeWidth={3} strokeLinecap="round">
-        <Line x1={x + 6} y1={H - 52} x2={x + w - 6} y2={H - 16} />
-      </G>
-    </Svg>
   );
 }
 

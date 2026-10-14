@@ -1,4 +1,4 @@
-import Svg, { Circle, Ellipse, Line, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
 
 import type { Feature } from '../upsell/entitlements';
 import { colors } from '../theme';
@@ -8,7 +8,6 @@ export const FEATURE_TINT: Record<Feature, string> = {
   cinematic: colors.accent,
   asteroids: colors.blue,
   aftermath: colors.magenta,
-  ads: '#7C86A6',
   compositions: colors.yellow,
   burns: '#FF4D6A',
   presets: '#3DDC97',
@@ -36,12 +35,6 @@ export function FeatureGlyph({ feature, size = 20, color = '#FFFFFF' }: { featur
         <>
           <Circle cx={12} cy={12} r={9} {...s} />
           <Path d="M12 7 V12 L15.5 14" {...s} />
-        </>
-      )}
-      {feature === 'ads' && (
-        <>
-          <Rect x={3} y={6} width={18} height={12} rx={2.5} {...s} />
-          <Line x1={4} y1={20} x2={20} y2={4} {...s} />
         </>
       )}
       {feature === 'compositions' && (
