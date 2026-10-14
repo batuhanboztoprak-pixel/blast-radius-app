@@ -49,7 +49,7 @@ docs/
   PHYSICS.md          equations, constants and known limitations
   LOCALIZATION.md     languages, translation files, App Store listings (store/listing.json)
   LAUNCH_CHECKLIST.md App Store Connect / privacy steps
-  RELEASE_1.0.1.md    the ad-free 1.0.1 update, step by step
+  RESUBMIT_1.0_ADFREE.md  replacing build 4 with the ad-free 1.0, step by step
   APP_STORE_SUBMISSION.md step-by-step submission guide
   ROADMAP.md          plan for 1.1 and later
 site/             the support + privacy website (published from the gh-pages branch to blastradius.curfewapp.co)

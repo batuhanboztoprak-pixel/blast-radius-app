@@ -3,7 +3,7 @@
     "name": "Blast Radius",
     "slug": "blast-radius",
     "owner": "curfewapps-team",
-    "version": "1.0.1",
+    "version": "1.0.0",
     "scheme": "blastradius",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
