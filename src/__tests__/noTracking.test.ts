@@ -1,10 +1,9 @@
-import { describe, expect, it } from 'bun:test';
-import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readdirSync, readFileSync } from 'fs';
+import { join } from 'path';
 
 // App Review rejects a binary that mentions App Tracking Transparency when the
 // app never asks to track. Keep every trace of it out of the config.
-const ROOT = join(import.meta.dir, '..', '..');
+const ROOT = join(__dirname, '..', '..');
 const BANNED = /NSUserTrackingUsageDescription|tracking-transparency|google-mobile-ads/;
 
 describe('no tracking', () => {
