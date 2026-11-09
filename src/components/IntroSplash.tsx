@@ -6,11 +6,10 @@ import { t } from '../i18n/core';
 import { fonts } from '../theme';
 
 // The key art is split in two layers so the meteor can fly in: the Earth with
-// the rings (the meteor painted out), and the meteor with its tail and shards.
-const PLATE = require('../../assets/brand/impact-plate.jpg');
+// the rings (the meteor painted out, edges faded out: the same image as the
+// native launch screen), and the meteor with its tail and shards.
+const PLATE = require('../../assets/splash-icon.png');
 const METEOR = require('../../assets/brand/impact-meteor.png');
-const WORDMARK = require('../../assets/brand/wordmark.png');
-const WORDMARK_ASPECT = 1543 / 488;
 
 // Positions in the artwork, as fractions of its size.
 /** The meteor layer's box. */
@@ -24,35 +23,35 @@ const IMPACT = { x: 0.502, y: 0.518 };
 /** Unit vector from the rock back along its tail (up and to the right). */
 const TAIL = { x: 0.668, y: -0.744 };
 
-const TOTAL_MS = 3600;
-const SPLASH_WORDMARK_WIDTH = 280;
+const TOTAL_MS = 3200;
+/** Width of the art on the native launch screen (app.json `imageWidth`). */
+const SPLASH_ART_WIDTH = 360;
 /** The native splash colour (app.json), so the hand-over is seamless. */
-export const INTRO_BG = '#0A0340';
+export const INTRO_BG = '#06032B';
 
 /**
- * The launch intro. It starts exactly where the native splash leaves off (the
- * wordmark, centred, 280 pt wide). Then the Earth rises in behind it and the
- * meteor streaks in from deep space, growing as it comes closer, until it is
- * right above the ground; the rings flare up and the tagline appears. A tap
- * skips it.
+ * The launch intro. It starts exactly where the native launch screen leaves
+ * off (the Earth and its rings, centred, 360 pt wide, no text). The planet
+ * settles into place, the rings calm, and the meteor streaks in from deep
+ * space, growing as it comes closer, until it is right above the ground; the
+ * rings flare up, then the wordmark and tagline rise in. A tap skips it.
  */
 export function IntroSplash({ onDone }: { onDone: () => void }) {
   const { width: w, height: h } = useWindowDimensions();
   const [p] = useState(() => new Animated.Value(0));
   const [fade] = useState(() => new Animated.Value(1));
 
-  // Wordmark: starts as on the native splash, ends over the bottom of the planet.
-  const wm0 = SPLASH_WORDMARK_WIDTH;
-  const wm1 = Math.min(w * 0.64, 300);
-  const wmH0 = wm0 / WORDMARK_ASPECT;
-  const wmScale = wm1 / wm0;
-
   // Artwork: a little wider than the screen; art + wordmark + tagline are
   // centred on the screen as a group.
   const A = w * 1.12;
+  const WM_H = 92;
   const artLeft = (w - A) / 2;
-  const artTop = Math.max(h * 0.04, (h - (A * 0.93 + (wmH0 * wmScale) / 2 + 50)) / 2);
-  const endCY = artTop + A * 0.93;
+  const artTop = Math.max(h * 0.04, (h - (A * 0.86 + WM_H + 40)) / 2);
+  /** Top of the wordmark, over the bottom of the planet. */
+  const wmTop = artTop + A * 0.84;
+  // The art starts as drawn on the launch screen: centred, SPLASH_ART_WIDTH wide.
+  const art0Scale = SPLASH_ART_WIDTH / A;
+  const art0Y = h / 2 - (artTop + A / 2);
 
   const finish = () => {
     Animated.timing(fade, { toValue: 0, duration: 380, useNativeDriver: true }).start(() => onDone());
@@ -85,11 +84,13 @@ export function IntroSplash({ onDone }: { onDone: () => void }) {
   // Timeline (fractions of TOTAL_MS). Easing is baked into the ranges, since
   // interpolate easing isn't supported on the native driver.
   const HIT = 0.4;
-  const artOpacity = p.interpolate({ inputRange: [0, 0.05, 0.22, 1], outputRange: [0, 0, 1, 1] });
-  const artScale = p.interpolate({ inputRange: [0, 0.05, 0.2, 0.4, 1], outputRange: [1.12, 1.12, 1.06, 1.025, 1] });
-  const move = p.interpolate({ inputRange: [0, 0.07, 0.13, 0.19, 0.25, 1], outputRange: [0, 0, 0.35, 0.75, 1, 1] });
-  const wmY = move.interpolate({ inputRange: [0, 1], outputRange: [0, endCY - h / 2] });
-  const wmS = move.interpolate({ inputRange: [0, 1], outputRange: [1, wmScale] });
+  // Settle from the launch-screen framing into place (ease-in-out, baked in).
+  const move = p.interpolate({ inputRange: [0, 0.04, 0.1, 0.17, 0.24, 1], outputRange: [0, 0, 0.2, 0.75, 1, 1] });
+  const artY = move.interpolate({ inputRange: [0, 1], outputRange: [art0Y, 0] });
+  const artScale = p.interpolate({
+    inputRange: [0, 0.04, 0.24, 0.4, 1],
+    outputRange: [art0Scale, art0Scale, 1.025, 1.01, 1],
+  });
 
   // The meteor: far away and small, then faster and bigger (ease-in), stopping
   // just above the ground; afterwards it keeps creeping in a touch.
@@ -106,12 +107,15 @@ export function IntroSplash({ onDone }: { onDone: () => void }) {
   const meteorOpacity = p.interpolate({ inputRange: [0, 0.1, 0.15, 1], outputRange: [0, 0, 1, 1] });
 
   // Impact: the rings light up, a flash, the impact point flares.
-  const ringsDim = p.interpolate({ inputRange: [0, HIT, HIT + 0.12, 1], outputRange: [1, 1, 0, 0] });
+  // The rings start lit as on the launch screen, calm while the meteor comes in, then flare.
+  const ringsDim = p.interpolate({ inputRange: [0, 0.06, 0.18, HIT, HIT + 0.12, 1], outputRange: [0, 0, 1, 1, 0, 0] });
   const flash = p.interpolate({ inputRange: [0, HIT, HIT + 0.015, HIT + 0.14, 1], outputRange: [0, 0, 0.55, 0, 0] });
   const glowScale = p.interpolate({ inputRange: [0, HIT, HIT + 0.1, HIT + 0.25, 1], outputRange: [0.3, 0.3, 1.25, 1, 1.05] });
   const glowOpacity = p.interpolate({ inputRange: [0, HIT, HIT + 0.03, HIT + 0.3, 1], outputRange: [0, 0, 1, 0.5, 0.4] });
-  const tagOpacity = p.interpolate({ inputRange: [0, 0.55, 0.68, 1], outputRange: [0, 0, 1, 1] });
-  const tagY = p.interpolate({ inputRange: [0, 0.55, 0.68, 1], outputRange: [10, 10, 0, 0] });
+  const wmOpacity = p.interpolate({ inputRange: [0, 0.47, 0.6, 1], outputRange: [0, 0, 1, 1] });
+  const wmRise = p.interpolate({ inputRange: [0, 0.47, 0.6, 1], outputRange: [14, 14, 0, 0] });
+  const tagOpacity = p.interpolate({ inputRange: [0, 0.6, 0.72, 1], outputRange: [0, 0, 1, 1] });
+  const tagY = p.interpolate({ inputRange: [0, 0.6, 0.72, 1], outputRange: [10, 10, 0, 0] });
 
   const glow = A * 0.62;
   const dimW = A * RINGS.rx * 2.3;
@@ -129,8 +133,7 @@ export function IntroSplash({ onDone }: { onDone: () => void }) {
             top: artTop,
             width: A,
             height: A,
-            opacity: artOpacity,
-            transform: [{ scale: artScale }],
+            transform: [{ translateY: artY }, { scale: artScale }],
           }}
         >
           {/* The Earth and the rings. */}
@@ -203,37 +206,36 @@ export function IntroSplash({ onDone }: { onDone: () => void }) {
             <Image source={METEOR} style={{ width: metW, height: metH }} resizeMode="stretch" />
           </Animated.View>
 
-          {/* Fade the artwork's top and bottom edges into the background. */}
-          <Svg width={A} height={A} style={StyleSheet.absoluteFill} pointerEvents="none">
-            <Defs>
-              <LinearGradient id="introFade" x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0" stopColor={INTRO_BG} stopOpacity="0.6" />
-                <Stop offset="0.1" stopColor={INTRO_BG} stopOpacity="0" />
-                <Stop offset="0.66" stopColor={INTRO_BG} stopOpacity="0" />
-                <Stop offset="1" stopColor={INTRO_BG} stopOpacity="1" />
-              </LinearGradient>
-            </Defs>
-            <Rect x={0} y={0} width={A} height={A} fill="url(#introFade)" />
-          </Svg>
+          {/* Fade the artwork's bottom into the wordmark area once it has settled
+              (absent on the launch frame, so the hand-over is exact). */}
+          <Animated.View style={[StyleSheet.absoluteFill, { opacity: move }]} pointerEvents="none">
+            <Svg width={A} height={A} pointerEvents="none">
+              <Defs>
+                <LinearGradient id="introFade" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0" stopColor={INTRO_BG} stopOpacity="0.6" />
+                  <Stop offset="0.1" stopColor={INTRO_BG} stopOpacity="0" />
+                  <Stop offset="0.66" stopColor={INTRO_BG} stopOpacity="0" />
+                  <Stop offset="1" stopColor={INTRO_BG} stopOpacity="1" />
+                </LinearGradient>
+              </Defs>
+              <Rect x={0} y={0} width={A} height={A} fill="url(#introFade)" />
+            </Svg>
+          </Animated.View>
         </Animated.View>
 
         <Animated.View style={[StyleSheet.absoluteFill, styles.flash, { opacity: flash }]} pointerEvents="none" />
 
-        {/* Wordmark: starts exactly where the native splash drew it. */}
+        {/* Wordmark: crisp live type, rising in after the impact. */}
         <Animated.View
-          style={{
-            position: 'absolute',
-            left: (w - wm0) / 2,
-            top: h / 2 - wmH0 / 2,
-            width: wm0,
-            height: wmH0,
-            transform: [{ translateY: wmY }, { scale: wmS }],
-          }}
+          style={[styles.tagWrap, { top: wmTop, opacity: wmOpacity, transform: [{ translateY: wmRise }] }]}
+          accessible
+          accessibilityLabel="Blast Radius"
         >
-          <Image source={WORDMARK} style={{ width: wm0, height: wmH0 }} resizeMode="contain" accessibilityLabel="Blast Radius" />
+          <Text style={styles.wmBlast}>BLAST</Text>
+          <Text style={styles.wmRadius}>RADIUS</Text>
         </Animated.View>
 
-        <Animated.View style={[styles.tagWrap, { top: endCY + (wmH0 * wmScale) / 2 + 12, opacity: tagOpacity, transform: [{ translateY: tagY }] }]}>
+        <Animated.View style={[styles.tagWrap, { top: wmTop + WM_H + 8, opacity: tagOpacity, transform: [{ translateY: tagY }] }]}>
           <Text style={styles.tagline}>{t('intro.tagline')}</Text>
         </Animated.View>
       </Pressable>
@@ -245,5 +247,25 @@ const styles = StyleSheet.create({
   screen: { backgroundColor: INTRO_BG, zIndex: 100 },
   flash: { backgroundColor: '#FFF1D6' },
   tagWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
-  tagline: { fontSize: 16, color: 'rgba(230,226,255,0.85)', fontFamily: fonts.bodyMedium, letterSpacing: 0.3 },
+  wmBlast: {
+    fontSize: 46,
+    lineHeight: 50,
+    color: '#FFFFFF',
+    fontFamily: fonts.display,
+    letterSpacing: 7,
+    marginRight: -7,
+    textShadowColor: 'rgba(140,110,255,0.55)',
+    textShadowRadius: 18,
+  },
+  wmRadius: {
+    fontSize: 19,
+    lineHeight: 24,
+    color: '#FF8A4A',
+    fontFamily: fonts.display,
+    letterSpacing: 13,
+    marginRight: -13,
+    textShadowColor: 'rgba(255,110,40,0.6)',
+    textShadowRadius: 12,
+  },
+  tagline: { fontSize: 16, color: 'rgba(230,226,255,0.85)', fontFamily: fonts.bodyMedium, letterSpacing: 0.3, textAlign: 'center', paddingHorizontal: 28 },
 });

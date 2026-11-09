@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 12,
     bottom: 12,
-    backgroundColor: 'rgba(11,14,23,0.88)',
+    backgroundColor: 'rgba(10,7,38,0.88)',
     borderColor: colors.border,
     borderWidth: 1,
     borderRadius: 10,

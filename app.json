@@ -8,7 +8,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#0A0340",
+    "backgroundColor": "#0A0726",
     "ios": {
       "bundleIdentifier": "com.blastradius.app",
       "supportsTablet": false,
@@ -84,9 +84,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0A0340",
+          "backgroundColor": "#06032B",
           "image": "./assets/splash-icon.png",
-          "imageWidth": 280
+          "imageWidth": 360
         }
       ],
       [

@@ -296,7 +296,7 @@ export const en = {
   'af.mapHint': 'Shown on the map above.',
   'af.prev': 'Previous stage',
   'af.next': 'Next stage',
-  'intro.tagline': 'What if it hit your city?',
+  'intro.tagline': 'Pick a city. Drop an asteroid.',
   'intro.skip': 'Skip intro',
   'af.chartA11y': 'Chart: global temperature drops by at least 26 degrees Celsius within a year and takes about 30 years to recover.',
   'af.chartYear': '{n} y',

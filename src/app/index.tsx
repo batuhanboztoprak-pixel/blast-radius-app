@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     borderRadius: radius.lg,
     overflow: 'hidden',
-    backgroundColor: '#0F1424',
+    backgroundColor: '#0D0A2C',
   },
   label: {
     position: 'absolute',

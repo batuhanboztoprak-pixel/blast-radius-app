@@ -282,7 +282,7 @@ export const fr: Messages = {
   'af.mapHint': 'Visible sur la carte ci-dessus.',
   'af.prev': 'Étape précédente',
   'af.next': 'Étape suivante',
-  'intro.tagline': 'Et s\'il frappait votre ville ?',
+  'intro.tagline': 'Choisissez une ville. Lâchez un astéroïde.',
   'intro.skip': 'Passer l\'intro',
   'af.chartA11y': 'Graphique : la température mondiale chute d’au moins 26 °C en un an et met environ 30 ans à revenir.',
   'af.chartYear': '{n} a',

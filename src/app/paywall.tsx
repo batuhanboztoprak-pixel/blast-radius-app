@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
   },
   kicker: { fontSize: 11, letterSpacing: 1.8, color: colors.accent, fontFamily: fonts.bodySemi },
   title: { fontSize: 32, lineHeight: 37, color: colors.text, fontFamily: fonts.display },
-  subtitle: { fontSize: 15, lineHeight: 21, color: '#AEB4C8', fontFamily: fonts.body },
+  subtitle: { fontSize: 15, lineHeight: 21, color: '#B4B0D8', fontFamily: fonts.body },
   section: {
     marginTop: 26,
     marginBottom: 10,
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,107,74,0.55)',
   },
   lifetime: { fontSize: 16, color: colors.text, fontFamily: fonts.display },
-  lifetimeNote: { marginTop: 2, fontSize: 12, color: '#AEB4C8', fontFamily: fonts.body },
+  lifetimeNote: { marginTop: 2, fontSize: 12, color: '#B4B0D8', fontFamily: fonts.body },
   price: { fontSize: 26, color: colors.text, fontFamily: fonts.display, maxWidth: 140 },
   storeNote: { color: colors.muted, fontFamily: fonts.body, fontSize: 12, textAlign: 'center' },
   ctaGlow: {

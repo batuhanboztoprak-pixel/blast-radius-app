@@ -210,7 +210,7 @@ export const ShareCard = forwardRef<View, Props>(function ShareCard(
 const styles = StyleSheet.create({
   brand: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   bottom: { position: 'absolute', left: 0, right: 0, bottom: 0 },
-  map: { borderRadius: 20, overflow: 'hidden', backgroundColor: '#0F1424' },
+  map: { borderRadius: 20, overflow: 'hidden', backgroundColor: '#0D0A2C' },
   kicker: { fontSize: 11, letterSpacing: 1.5, color: colors.muted, fontFamily: fonts.bodySemi },
   headline: { color: colors.text, fontFamily: fonts.display, lineHeight: undefined },
   legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 12, rowGap: 4 },

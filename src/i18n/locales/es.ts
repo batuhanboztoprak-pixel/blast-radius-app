@@ -282,7 +282,7 @@ export const es: Messages = {
   'af.mapHint': 'Se muestra en el mapa de arriba.',
   'af.prev': 'Etapa anterior',
   'af.next': 'Etapa siguiente',
-  'intro.tagline': '¿Y si cayera en tu ciudad?',
+  'intro.tagline': 'Elige una ciudad. Suelta un asteroide.',
   'intro.skip': 'Saltar intro',
   'af.chartA11y': 'Gráfico: la temperatura global baja al menos 26 °C en un año y tarda unos 30 años en recuperarse.',
   'af.chartYear': '{n} a',

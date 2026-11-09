@@ -283,7 +283,7 @@ export const ja: Messages = {
   'af.mapHint': '上の地図に表示されています。',
   'af.prev': '前の段階',
   'af.next': '次の段階',
-  'intro.tagline': 'もしあなたの街に落ちたら？',
+  'intro.tagline': '街を選んで、小惑星を落とそう。',
   'intro.skip': 'イントロをスキップ',
   'af.chartA11y': 'グラフ：世界の気温は1年以内に少なくとも26°C下がり、回復に約30年かかります。',
   'af.chartYear': '{n}年',

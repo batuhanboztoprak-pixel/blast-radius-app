@@ -282,7 +282,7 @@ export const de: Messages = {
   'af.mapHint': 'Auf der Karte oben zu sehen.',
   'af.prev': 'Vorherige Phase',
   'af.next': 'Nächste Phase',
-  'intro.tagline': 'Was, wenn er deine Stadt trifft?',
+  'intro.tagline': 'Wähle eine Stadt. Lass einen Asteroiden fallen.',
   'intro.skip': 'Intro überspringen',
   'af.chartA11y': 'Diagramm: Die globale Temperatur fällt innerhalb eines Jahres um mindestens 26 °C und braucht etwa 30 Jahre zur Erholung.',
   'af.chartYear': '{n} J.',

@@ -282,7 +282,7 @@ export const tr: Messages = {
   'af.mapHint': 'Yukarıdaki haritada gösteriliyor.',
   'af.prev': 'Önceki aşama',
   'af.next': 'Sonraki aşama',
-  'intro.tagline': 'Ya senin şehrine çarparsa?',
+  'intro.tagline': 'Bir şehir seç. Asteroidi bırak.',
   'intro.skip': 'Girişi geç',
   'af.chartA11y': 'Grafik: küresel sıcaklık bir yıl içinde en az 26 °C düşer ve toparlanması yaklaşık 30 yıl sürer.',
   'af.chartYear': '{n} yıl',
