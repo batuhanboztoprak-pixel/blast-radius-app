@@ -29,6 +29,12 @@ first real numbers (downloads, conversion at $2.99 vs $4.99, retention) are in.
    - Once per install; never for Pro; doesn't block anything.
    - Why: users understand Pro only after seeing it; expected to beat a generic "Go Pro".
 
+4. **Shock wave animation on the rings**
+   - Play the damage rings as an expanding shock wave (crater, then severe shockwave,
+     burns, windows) instead of showing them all at once after impact.
+   - Why: it is the best-looking part of every TikTok clip, so animating it makes each
+     recording more watchable and shareable.
+
 ### Measure before deciding anything else
 - Pricing: compare conversion during the $2.99 launch fortnight with the weeks at $4.99.
   $4.99 only needs ~60% as many buyers to earn the same; keep whichever earns more.
